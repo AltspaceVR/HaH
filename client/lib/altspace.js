@@ -93,6 +93,7 @@ var OBJMTLLoader = (function () {
             var mtlLoader = new THREE.MTLLoader();
             var baseUrl = mtlFile.split('/').slice(0, -1).join('/');
             mtlLoader.setBaseUrl(baseUrl + '/');
+            mtlLoader.setCrossOrigin(this.crossOrigin);
             mtlLoader.load(mtlFile, function (materials) {
                 var objLoader = new THREE.OBJLoader();
                 objLoader.setMaterials(materials);
@@ -2144,163 +2145,163 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  * @memberof module:altspace/utilities/behaviors
  **/
 window.altspace.utilities.behaviors.Object3DSync = function (config){
-	config = config || {};
-	/*if (config.position === undefined) config.position = true;
-	if (config.rotation === undefined) config.rotation = true;
-	if (config.scale === undefined) config.scale = true; */
-	var object3d;
-	var scene;
-	var ref;
-	var key;
-	var dataRef;
-	var ownerRef;
-	var transformRef;
+  config = config || {};
+  /*if (config.position === undefined) config.position = true;
+  if (config.rotation === undefined) config.rotation = true;
+  if (config.scale === undefined) config.scale = true; */
+  var object3d;
+  var scene;
+  var ref;
+  var key;
+  var dataRef;
+  var ownerRef;
+  var transformRef;
 
-	var sceneSync;
-	var isMine = false;
+  var sceneSync;
+  var isMine = false;
 
-	var position = new THREE.Vector3();
-	var quaternion = new THREE.Quaternion(); 
-	var scale = new THREE.Vector3();
-	var isEqual = require('lodash.isequal');
+  var position = new THREE.Vector3();
+  var quaternion = new THREE.Quaternion(); 
+  var scale = new THREE.Vector3();
+  var isEqual = require('lodash.isequal');
 
 
-	function link(objectRef, sS) {
-		ref = objectRef;
-		key = ref.key();
-		transformRef = ref.child('batch');
-		dataRef = ref.child('data');
-		ownerRef = ref.child('owner');
-		sceneSync = sS;
-	}
+  function link(objectRef, sS) {
+    ref = objectRef;
+    key = ref.key();
+    transformRef = ref.child('batch');
+    dataRef = ref.child('data');
+    ownerRef = ref.child('owner');
+    sceneSync = sS;
+  }
 
-	//TODO: lerp
-	function setupReceive() {
-		transformRef.on('value', function (snapshot) {
+  //TODO: lerp
+  function setupReceive() {
+    transformRef.on('value', function (snapshot) {
 
-			if (isMine) return;
+      if (isMine) return;
 
-			var value = snapshot.val();
-			if (!value) return;
+      var value = snapshot.val();
+      if (!value) return;
 
-			if (config.position) {
-				object3d.position.set(value.position.x, value.position.y, value.position.z);
-			}
-			if (config.rotation) {
-				object3d.quaternion.set(value.quaternion.x, value.quaternion.y, value.quaternion.z, value.quaternion.w);
-			}
-			if (config.scale) {
-				object3d.scale.set(value.scale.x, value.scale.y, value.scale.z);
-			}
-		});
+      if (config.position) {
+        object3d.position.set(value.position.x, value.position.y, value.position.z);
+      }
+      if (config.rotation) {
+        object3d.quaternion.set(value.quaternion.x, value.quaternion.y, value.quaternion.z, value.quaternion.w);
+      }
+      if (config.scale) {
+        object3d.scale.set(value.scale.x, value.scale.y, value.scale.z);
+      }
+    });
 
-		ownerRef.on('value', function (snapshot) {
-			var newOwnerId = snapshot.val();
+    ownerRef.on('value', function (snapshot) {
+      var newOwnerId = snapshot.val();
 
-			var gained = newOwnerId === sceneSync.clientId && !isMine;
-			if (gained) object3d.dispatchEvent({ type: 'ownershipgained' });
+      var gained = newOwnerId === sceneSync.clientId && !isMine;
+      if (gained) object3d.dispatchEvent({ type: 'ownershipgained' });
 
-			var lost = newOwnerId !== sceneSync.clientId && isMine;
-			if (lost) object3d.dispatchEvent({ type: 'ownershiplost' });
-			
-			isMine = newOwnerId === sceneSync.clientId;
-		});
-	}
+      var lost = newOwnerId !== sceneSync.clientId && isMine;
+      if (lost) object3d.dispatchEvent({ type: 'ownershiplost' });
+      
+      isMine = newOwnerId === sceneSync.clientId;
+    });
+  }
 
-	function send() {
-		if (!isMine) return;
+  function send() {
+    if (!isMine) return;
 
-		var transform = {};
-		if (config.world) {
-			object3d.updateMatrixWorld();//call before sending to avoid being a frame behind
-			object3d.matrixWorld.decompose(position, quaternion, scale); 
-		} else {
-			position = object3d.position;
-			quaternion = object3d.quaternion;
-			scale = object3d.scale;
-		}
-		if (config.position) {
-			transform.position = {
-				x: position.x,
-				y: position.y,
-				z: position.z
-			};
-		}
-		if (config.rotation) {
-			transform.quaternion = {
-				x: quaternion.x,
-				y: quaternion.y,
-				z: quaternion.z,
-				w: quaternion.w
-			};
-		}
-		if (config.scale) {
-			transform.scale = {
-				x: scale.x,
-				y: scale.y,
-				z: scale.z
-			};
-		}
-		if (Object.keys(transform).length > 0) {
-			if (isEqual(transform, this.lastTransform)) { return; }
-			transformRef.set(transform);
-			this.lastTransform = transform;
-		}
-	}
+    var transform = {};
+    if (config.world) {
+      object3d.updateMatrixWorld();//call before sending to avoid being a frame behind
+      object3d.matrixWorld.decompose(position, quaternion, scale); 
+    } else {
+      position = object3d.position;
+      quaternion = object3d.quaternion;
+      scale = object3d.scale;
+    }
+    if (config.position) {
+      transform.position = {
+        x: position.x,
+        y: position.y,
+        z: position.z
+      };
+    }
+    if (config.rotation) {
+      transform.quaternion = {
+        x: quaternion.x,
+        y: quaternion.y,
+        z: quaternion.z,
+        w: quaternion.w
+      };
+    }
+    if (config.scale) {
+      transform.scale = {
+        x: scale.x,
+        y: scale.y,
+        z: scale.z
+      };
+    }
+    if (Object.keys(transform).length > 0) {
+      if (isEqual(transform, this.lastTransform)) { return; }
+      transformRef.set(transform);
+      this.lastTransform = transform;
+    }
+  }
 
-	function awake(o, s) {
-		object3d = o;
-		scene = s;
+  function awake(o, s) {
+    object3d = o;
+    scene = s;
 
-		setupReceive();
-	}
+    setupReceive();
+  }
 
-	function update(deltaTime) {
-		
-	}
+  function update(deltaTime) {
+    
+  }
 
-	/**
-	 * Take ownership of this object. The client that instantiates an object owns it,
-	 * afterwards changes in ownership must be managed by the app. Manual modifications
-	 * to the Firebase ref's will not obey ownership status.
-	 * @instance
-	 * @method takeOwnership
-	 * @memberof module:altspace/utilities/behaviors.Object3DSync
-	 */
-	function takeOwnership() {
-		ownerRef.set(sceneSync.clientId);
-	}
+  /**
+   * Take ownership of this object. The client that instantiates an object owns it,
+   * afterwards changes in ownership must be managed by the app. Manual modifications
+   * to the Firebase ref's will not obey ownership status.
+   * @instance
+   * @method takeOwnership
+   * @memberof module:altspace/utilities/behaviors.Object3DSync
+   */
+  function takeOwnership() {
+    ownerRef.set(sceneSync.clientId);
+  }
 
-	var exports = { awake: awake, update: update, type: 'Object3DSync', link: link, autoSend: send, takeOwnership: takeOwnership };
+  var exports = { awake: awake, update: update, type: 'Object3DSync', link: link, autoSend: send, takeOwnership: takeOwnership };
 
-	/**
-	 * Firebase reference for the 'data' child location, can be used to store data related to
-	 * this object.
-	 * @readonly
-	 * @instance
-	 * @member {Firebase} dataRef
-	 * @memberof module:altspace/utilities/behaviors.Object3DSync
-	 */
-	Object.defineProperty(exports, 'dataRef', {
-		get: function () {
-			return dataRef;
-		}
-	});
+  /**
+   * Firebase reference for the 'data' child location, can be used to store data related to
+   * this object.
+   * @readonly
+   * @instance
+   * @member {Firebase} dataRef
+   * @memberof module:altspace/utilities/behaviors.Object3DSync
+   */
+  Object.defineProperty(exports, 'dataRef', {
+    get: function () {
+      return dataRef;
+    }
+  });
 
-	/**
-	 * True if this object is currently owned by this client, false otherwise.
-	 * @readonly
-	 * @instance
-	 * @member {boolean} isMine
-	 * @memberof module:altspace/utilities/behaviors.Object3DSync
-	 */
-	Object.defineProperty(exports, 'isMine', {
-		get: function () {
-			return isMine;
-		}
-	});
+  /**
+   * True if this object is currently owned by this client, false otherwise.
+   * @readonly
+   * @instance
+   * @member {boolean} isMine
+   * @memberof module:altspace/utilities/behaviors.Object3DSync
+   */
+  Object.defineProperty(exports, 'isMine', {
+    get: function () {
+      return isMine;
+    }
+  });
 
-	return exports;
+  return exports;
 };
 
 //manual modifications to the ref's will not obey ownership status.
@@ -2320,219 +2321,219 @@ window.altspace.utilities.behaviors.Object3DSync = function (config){
  * @author Mykhailo Stadnyk <mikhus@gmail.com>
  */
 ; var Url = (function() {
-	"use strict";
+  "use strict";
 
-	var
-		// mapping between what we want and <a> element properties
-		map = {
-			protocol : 'protocol',
-			host     : 'hostname',
-			port     : 'port',
-			path     : 'pathname',
-			query    : 'search',
-			hash     : 'hash'
-		},
+  var
+    // mapping between what we want and <a> element properties
+    map = {
+      protocol : 'protocol',
+      host     : 'hostname',
+      port     : 'port',
+      path     : 'pathname',
+      query    : 'search',
+      hash     : 'hash'
+    },
 
-		/**
-		 * default ports as defined by http://url.spec.whatwg.org/#default-port
-		 * We need them to fix IE behavior, @see https://github.com/Mikhus/jsurl/issues/2
-		 */
-		defaultPorts = {
-			"ftp"    : 21,
-			"gopher" : 70,
-			"http"   : 80,
-			"https"  : 443,
-			"ws"     : 80,
-			"wss"    : 443
-		},
+    /**
+     * default ports as defined by http://url.spec.whatwg.org/#default-port
+     * We need them to fix IE behavior, @see https://github.com/Mikhus/jsurl/issues/2
+     */
+    defaultPorts = {
+      "ftp"    : 21,
+      "gopher" : 70,
+      "http"   : 80,
+      "https"  : 443,
+      "ws"     : 80,
+      "wss"    : 443
+    },
 
-		parse = function( self, url) {
-			var
-				d      = document,
-				link   = d.createElement( 'a'),
-				url    = url || d.location.href,
-				auth   = url.match( /\/\/(.*?)(?::(.*?))?@/) || []
-			;
+    parse = function( self, url) {
+      var
+        d      = document,
+        link   = d.createElement( 'a'),
+        url    = url || d.location.href,
+        auth   = url.match( /\/\/(.*?)(?::(.*?))?@/) || []
+      ;
 
-			link.href = url;
+      link.href = url;
 
-			for (var i in map) {
-				self[i] = link[map[i]] || '';
-			}
+      for (var i in map) {
+        self[i] = link[map[i]] || '';
+      }
 
-			// fix-up some parts
-			self.protocol = self.protocol.replace( /:$/, '');
-			self.query    = self.query.replace( /^\?/, '');
-			self.hash     = self.hash.replace( /^#/, '');
-			self.user     = auth[1] || '';
-			self.pass     = auth[2] || '';
-			self.port     = (defaultPorts[self.protocol] == self.port || self.port == 0) ? '' : self.port; // IE fix, Android browser fix
+      // fix-up some parts
+      self.protocol = self.protocol.replace( /:$/, '');
+      self.query    = self.query.replace( /^\?/, '');
+      self.hash     = self.hash.replace( /^#/, '');
+      self.user     = auth[1] || '';
+      self.pass     = auth[2] || '';
+      self.port     = (defaultPorts[self.protocol] == self.port || self.port == 0) ? '' : self.port; // IE fix, Android browser fix
 
-			if (!self.protocol && !/^([a-z]+:)?\/\//.test( url)) { // is IE and path is relative
-				var
-					base     = new Url( d.location.href.match(/(.*\/)/)[0]),
-					basePath = base.path.split( '/'),
-					selfPath = self.path.split( '/')
-				;
+      if (!self.protocol && !/^([a-z]+:)?\/\//.test( url)) { // is IE and path is relative
+        var
+          base     = new Url( d.location.href.match(/(.*\/)/)[0]),
+          basePath = base.path.split( '/'),
+          selfPath = self.path.split( '/')
+        ;
 
-				basePath.pop();
+        basePath.pop();
 
-				for (var i = 0, props = ['protocol','user','pass','host','port'], s = props.length; i < s; i++) {
-					self[props[i]] = base[props[i]];
-				}
+        for (var i = 0, props = ['protocol','user','pass','host','port'], s = props.length; i < s; i++) {
+          self[props[i]] = base[props[i]];
+        }
 
-				while (selfPath[0] == '..') { // skip all "../
-					basePath.pop();
-					selfPath.shift();
-				}
+        while (selfPath[0] == '..') { // skip all "../
+          basePath.pop();
+          selfPath.shift();
+        }
 
-				self.path = (url.substring(0, 1) != '/' ? basePath.join( '/') : '') + '/' + selfPath.join( '/');
-			}
+        self.path = (url.substring(0, 1) != '/' ? basePath.join( '/') : '') + '/' + selfPath.join( '/');
+      }
 
-			else {
-				// fix absolute URL's path in IE
-				self.path = self.path.replace( /^\/?/, '/');
-			}
+      else {
+        // fix absolute URL's path in IE
+        self.path = self.path.replace( /^\/?/, '/');
+      }
 
-			parseQs( self);
-		},
-		
-		decode = function(s) {
-			s = s.replace( /\+/g, ' ');
+      parseQs( self);
+    },
+    
+    decode = function(s) {
+      s = s.replace( /\+/g, ' ');
 
-			s = s.replace( /%([ef][0-9a-f])%([89ab][0-9a-f])%([89ab][0-9a-f])/gi,
-				function( code, hex1, hex2, hex3) {
-					var
-						n1 = parseInt( hex1, 16) - 0xE0,
-						n2 = parseInt( hex2, 16) - 0x80
-					;
-	
-					if (n1 == 0 && n2 < 32) {
-						return code;
-					}
-	
-					var
-						n3 = parseInt( hex3, 16) - 0x80,
-						n = (n1 << 12) + (n2 << 6) + n3
-					;
-	
-					if (n > 0xFFFF) {
-						return code;
-					}
-	
-					return String.fromCharCode( n);
-				}
-			);
+      s = s.replace( /%([ef][0-9a-f])%([89ab][0-9a-f])%([89ab][0-9a-f])/gi,
+        function( code, hex1, hex2, hex3) {
+          var
+            n1 = parseInt( hex1, 16) - 0xE0,
+            n2 = parseInt( hex2, 16) - 0x80
+          ;
+  
+          if (n1 == 0 && n2 < 32) {
+            return code;
+          }
+  
+          var
+            n3 = parseInt( hex3, 16) - 0x80,
+            n = (n1 << 12) + (n2 << 6) + n3
+          ;
+  
+          if (n > 0xFFFF) {
+            return code;
+          }
+  
+          return String.fromCharCode( n);
+        }
+      );
 
-			s = s.replace( /%([cd][0-9a-f])%([89ab][0-9a-f])/gi,
-				function( code, hex1, hex2) {
-					var n1 = parseInt(hex1, 16) - 0xC0;
-	
-					if (n1 < 2) {
-						return code;
-					}
-	
-					var n2 = parseInt(hex2, 16) - 0x80;
-	
-					return String.fromCharCode( (n1 << 6) + n2);
-				}
-			);
+      s = s.replace( /%([cd][0-9a-f])%([89ab][0-9a-f])/gi,
+        function( code, hex1, hex2) {
+          var n1 = parseInt(hex1, 16) - 0xC0;
+  
+          if (n1 < 2) {
+            return code;
+          }
+  
+          var n2 = parseInt(hex2, 16) - 0x80;
+  
+          return String.fromCharCode( (n1 << 6) + n2);
+        }
+      );
 
-			s = s.replace( /%([0-7][0-9a-f])/gi,
-				function( code, hex) {
-					return String.fromCharCode( parseInt(hex, 16));
-				}
-			);
+      s = s.replace( /%([0-7][0-9a-f])/gi,
+        function( code, hex) {
+          return String.fromCharCode( parseInt(hex, 16));
+        }
+      );
 
-			return s;
-		},
+      return s;
+    },
 
-		parseQs = function( self) {
-			var qs = self.query;
+    parseQs = function( self) {
+      var qs = self.query;
 
-			self.query = new (function( qs) {
-				var re = /([^=&]+)(=([^&]*))?/g, match;
+      self.query = new (function( qs) {
+        var re = /([^=&]+)(=([^&]*))?/g, match;
 
-				while ((match = re.exec( qs))) {
-					var
-						key = decodeURIComponent(match[1].replace(/\+/g, ' ')),
-						value = match[3] ? decode(match[3]) : ''
-					;
+        while ((match = re.exec( qs))) {
+          var
+            key = decodeURIComponent(match[1].replace(/\+/g, ' ')),
+            value = match[3] ? decode(match[3]) : ''
+          ;
 
-					if (this[key] != null) {
-						if (!(this[key] instanceof Array)) {
-							this[key] = [this[key]];
-						}
+          if (this[key] != null) {
+            if (!(this[key] instanceof Array)) {
+              this[key] = [this[key]];
+            }
 
-						this[key].push( value);
-					}
+            this[key].push( value);
+          }
 
-					else {
-						this[key] = value;
-					}
-				}
+          else {
+            this[key] = value;
+          }
+        }
 
-				this.clear = function() {
-					for (key in this) {
-						if (!(this[key] instanceof Function)) {
-							delete this[key];
-						}
-					}
-				};
+        this.clear = function() {
+          for (key in this) {
+            if (!(this[key] instanceof Function)) {
+              delete this[key];
+            }
+          }
+        };
 
-				this.toString = function() {
-					var
-						s = '',
-						e = encodeURIComponent
-					;
+        this.toString = function() {
+          var
+            s = '',
+            e = encodeURIComponent
+          ;
 
-					for (var i in this) {
-						if (this[i] instanceof Function) {
-							continue;
-						}
+          for (var i in this) {
+            if (this[i] instanceof Function) {
+              continue;
+            }
 
-						if (this[i] instanceof Array) {
-							var len = this[i].length;
+            if (this[i] instanceof Array) {
+              var len = this[i].length;
 
-							if (len) {
-								for (var ii = 0; ii < len; ii++) {
-									s += s ? '&' : '';
-									s += e( i) + '=' + e( this[i][ii]);
-								}
-							}
+              if (len) {
+                for (var ii = 0; ii < len; ii++) {
+                  s += s ? '&' : '';
+                  s += e( i) + '=' + e( this[i][ii]);
+                }
+              }
 
-							else { // parameter is an empty array, so treat as an empty argument
-								s += (s ? '&' : '') + e( i) + '=';
-							}
-						}
+              else { // parameter is an empty array, so treat as an empty argument
+                s += (s ? '&' : '') + e( i) + '=';
+              }
+            }
 
-						else {
-							s += s ? '&' : '';
-							s += e( i) + '=' + e( this[i]);
-						}
-					}
+            else {
+              s += s ? '&' : '';
+              s += e( i) + '=' + e( this[i]);
+            }
+          }
 
-					return s;
-				};
-			})( qs);
-		}
-	;
+          return s;
+        };
+      })( qs);
+    }
+  ;
 
-	return function( url) {
-		this.toString = function() {
-			return (
-				(this.protocol && (this.protocol + '://')) +
-				(this.user && (this.user + (this.pass && (':' + this.pass)) + '@')) +
-				(this.host && this.host) +
-				(this.port && (':' + this.port)) +
-				(this.path && this.path) +
-				(this.query.toString() && ('?' + this.query)) +
-				(this.hash && ('#' + this.hash))
-			);
-		};
+  return function( url) {
+    this.toString = function() {
+      return (
+        (this.protocol && (this.protocol + '://')) +
+        (this.user && (this.user + (this.pass && (':' + this.pass)) + '@')) +
+        (this.host && this.host) +
+        (this.port && (':' + this.port)) +
+        (this.path && this.path) +
+        (this.query.toString() && ('?' + this.query)) +
+        (this.hash && ('#' + this.hash))
+      );
+    };
 
-		parse( this, url);
-	};
+    parse( this, url);
+  };
 }());
 
 /*! @license Firebase v2.2.9
@@ -2801,264 +2802,264 @@ U.prototype.We=function(a,b){x("Firebase.resetPassword",2,2,arguments.length);fg
 
 
 (function () {
-	//Cant use || as assigning the same value to an unwritable property would throw an error
-	if (!window.altspace) {
-		window.altspace = {};
-		window.altspace.inClient = false;
-	}
-	if (!window.altspace.utilities) {
-		window.altspace.utilities = {};
-	}
+  //Cant use || as assigning the same value to an unwritable property would throw an error
+  if (!window.altspace) {
+    window.altspace = {};
+    window.altspace.inClient = false;
+  }
+  if (!window.altspace.utilities) {
+    window.altspace.utilities = {};
+  }
 
-	// THREE is exposed locally by the UMD wrapper, but altspace-client.js
-	// requires it to be global so export it here, once we
-	if (!window.THREE) {
-		window.THREE = THREE
-	}
+  // THREE is exposed locally by the UMD wrapper, but altspace-client.js
+  // requires it to be global so export it here, once we
+  if (!window.THREE) {
+    window.THREE = THREE
+  }
 }());
 
 /**
- * The Sync utility is currently based on Firebase. It provides a quick way 
- * to synchronize apps between users (even when they are running outside of 
- * AltspaceVR). 
- * During the SDK beta, please consider all data stored with the sync 
- * utility to be ephemeral (it may be cleared or clobbered at any time). 
+ * The Sync utility is currently based on Firebase. It provides a quick way
+ * to synchronize apps between users (even when they are running outside of
+ * AltspaceVR).
+ * During the SDK beta, please consider all data stored with the sync
+ * utility to be ephemeral (it may be cleared or clobbered at any time).
  * You do not need a Firebase account to use the Sync utility.
- * 
+ *
  *
  * Refer to the [Firebase API documentation](https://www.firebase.com/docs/web/api/)
  * when working with the sync instance.
  * @module altspace/utilities/sync
  */
 altspace.utilities.sync = (function () {
-	var Firebase = window.Firebase;
-	var inAltspace = altspace && altspace.inClient;
-	var canonicalUrl = getCanonicalUrl();
+  var Firebase = window.Firebase;
+  var inAltspace = altspace && altspace.inClient;
+  var canonicalUrl = getCanonicalUrl();
 
-	var instance;
+  var instance;
 
-	function dashEscape(keyName) {
-		return keyName ? encodeURIComponent(keyName).replace(/\./g, '%2E').replace(/%[A-Z0-9]{2}/g, '-') : null;
-	}
+  function dashEscape(keyName) {
+    return keyName ? encodeURIComponent(keyName).replace(/\./g, '%2E').replace(/%[A-Z0-9]{2}/g, '-') : null;
+  }
 
-	function getCanonicalUrl() {
-		var canonicalElement = document.querySelector('link[rel=canonical]');
-		return canonicalElement ? canonicalElement.href : window.location.href;
-	}
+  function getCanonicalUrl() {
+    var canonicalElement = document.querySelector('link[rel=canonical]');
+    return canonicalElement ? canonicalElement.href : window.location.href;
+  }
 
-	function getInstance(params) {
-		console.warn('altspace.utilities.sync.getInstance has been deprecated, please use connect instead.');
-		return getInstanceRef(params);
-	}
+  function getInstance(params) {
+    console.warn('altspace.utilities.sync.getInstance has been deprecated, please use connect instead.');
+    return getInstanceRef(params);
+  }
 
-	function getInstanceRef(params) {
-		var canonicalUrl = getCanonicalUrl();
-		var url = new Url();
+  function getInstanceRef(params) {
+    var canonicalUrl = getCanonicalUrl();
+    var url = new Url();
 
-		params = params || {};
+    params = params || {};
 
-		var instanceId = params.instanceId || url.query['altspace-sync-instance'];
-		var projectId = getProjectId(params.appId, params.authorId, canonicalUrl);
+    var instanceId = params.instanceId || url.query['altspace-sync-instance'];
+    var projectId = getProjectId(params.appId, params.authorId, canonicalUrl);
 
-		var firebaseApp = new Firebase('https://altspace-apps.firebaseio.com/apps/examples/').child(projectId); //An example firebase to be used for testing. Data will be cleared periodically.
-		firebaseApp.child('lastUrl').set(canonicalUrl);
+    var firebaseApp = new Firebase('https://altspace-apps.firebaseio.com/apps/examples/').child(projectId); //An example firebase to be used for testing. Data will be cleared periodically.
+    firebaseApp.child('lastUrl').set(canonicalUrl);
 
-		var firebaseInstance;
+    var firebaseInstance;
 
-		if (instanceId) {
-			firebaseInstance = firebaseApp.child('instances').child(instanceId);
-		} else {
-			firebaseInstance = firebaseApp.child('instances').push();
-			instanceId = firebaseInstance.key();
-			url.query['altspace-sync-instance'] = instanceId;
-			window.location.href = url.toString();
-		}
-		instance = firebaseInstance;
-		return firebaseInstance;
-	}
+    if (instanceId) {
+      firebaseInstance = firebaseApp.child('instances').child(instanceId);
+    } else {
+      firebaseInstance = firebaseApp.child('instances').push();
+      instanceId = firebaseInstance.key();
+      url.query['altspace-sync-instance'] = instanceId;
+      window.location.href = url.toString();
+    }
+    instance = firebaseInstance;
+    return firebaseInstance;
+  }
 
-	function getProjectId(appId, authorId, canonicalUrl) {
-		return dashEscape(authorId || canonicalUrl) + ':' + dashEscape(appId || '');
-	}
+  function getProjectId(appId, authorId, canonicalUrl) {
+    return dashEscape(authorId || canonicalUrl) + ':' + dashEscape(appId || '');
+  }
 
-	function deprecatedAuthenticate(callback) {
-		console.warn('altspace.utilities.sync.authenticate has been depreciated, please use connect instead.');
-		var ref = instance || getInstance(params);
-		ref.authAnonymously(function(error, authData) {
-			if (error) {
-				console.error('Authetication Failed!', error);
-			} else {
-				callback(authData);
-			}
-		}, {remember: 'sessionOnly'});
-	}
+  function deprecatedAuthenticate(callback) {
+    console.warn('altspace.utilities.sync.authenticate has been depreciated, please use connect instead.');
+    var ref = instance || getInstance(params);
+    ref.authAnonymously(function(error, authData) {
+      if (error) {
+        console.error('Authetication Failed!', error);
+      } else {
+        callback(authData);
+      }
+    }, {remember: 'sessionOnly'});
+  }
 
-	// TODO Removed authentication step for now, until we upgrade to the new Firebase auth.
-	function authenticate(ref) {
-		return new Promise(function(resolve, reject) {
-			ref.authAnonymously(function(error, authData) {
-				if (error) {
-					console.error('Authetication Failed!', error);
-					reject(error);
-				} else {
-					resolve(authData);
-				}
-			}, { remember: 'sessionOnly' });
-		});
-	}
-	
-	/**
-	 * Retreived
-	 * via [altspace.utilities.sync.connect]{@link module:altspace/utilities/sync#connect}.
-	 * @class module:altspace/utilities/sync~Connection
-	 * @memberof module:altspace/utilities/sync
-	 */
+  // TODO Removed authentication step for now, until we upgrade to the new Firebase auth.
+  function authenticate(ref) {
+    return new Promise(function(resolve, reject) {
+      ref.authAnonymously(function(error, authData) {
+        if (error) {
+          console.error('Authetication Failed!', error);
+          reject(error);
+        } else {
+          resolve(authData);
+        }
+      }, { remember: 'sessionOnly' });
+    });
+  }
 
-	/**
-		* (In-client only) A Firebase reference for the current user (on a per app basis). This can be used for things like a persistent inventory or personal highscores.
-		* @instance
-		* @member {Firebase} user
-		* @memberof module:altspace/utilities/sync~Connection
-		*/
+  /**
+   * Retreived
+   * via [altspace.utilities.sync.connect]{@link module:altspace/utilities/sync#connect}.
+   * @class module:altspace/utilities/sync~Connection
+   * @memberof module:altspace/utilities/sync
+   */
 
-	/**
-		* A Firebase reference to the current instance of the app. 
-		* This will change if the query paramater is removed through navigation, rebeaming, the space timing out, or other reasons. 
-		* This can be used as an input to SceneSync
-		* @instance
-		* @member {Firebase} instance
-		* @memberof module:altspace/utilities/sync~Connection
-		*/
+  /**
+    * (In-client only) A Firebase reference for the current user (on a per app basis). This can be used for things like a persistent inventory or personal highscores.
+    * @instance
+    * @member {Firebase} user
+    * @memberof module:altspace/utilities/sync~Connection
+    */
 
-	/**
-		* (In-client only) A Firebase reference for the current space. Especially useful if multiple apps / instances need to communicate inside the space.
-		* @instance
-		* @member {Firebase} space
-		* @memberof module:altspace/utilities/sync~Connection
-		*/
+  /**
+    * A Firebase reference to the current instance of the app.
+    * This will change if the query paramater is removed through navigation, rebeaming, the space timing out, or other reasons.
+    * This can be used as an input to SceneSync
+    * @instance
+    * @member {Firebase} instance
+    * @memberof module:altspace/utilities/sync~Connection
+    */
 
-	/**
-		* A Firebase reference for the app. 
-		* This can be used for things like persistent high-scores, dynamic configuration, or inter-instance communication.
-		* @instance
-		* @member {Firebase} app
-		* @memberof module:altspace/utilities/sync~Connection
-		*/
+  /**
+    * (In-client only) A Firebase reference for the current space. Especially useful if multiple apps / instances need to communicate inside the space.
+    * @instance
+    * @member {Firebase} space
+    * @memberof module:altspace/utilities/sync~Connection
+    */
 
-
-	/**
-	 * Connect to a sync session to obtain Firebase references that can be used for syncronization of real-time and persistent state.
-	 * Returns a promise that will fufill with a [Connection]{@link module:altspace/utilities/sync~Connection}.
-	 *
-	 * @method connect
-	 * @param {Object} config
-	 * @param {String} config.authorId A unique identifier for yourself or your organization
-	 * @param {String} config.appId The name of your app
-	 * @param {String} [config.baseRefUrl] Override the base reference. Set this to use your own Firebase.
-	 * @param {String} [config.instanceId] Override the instanceId. Can also be overriden using a query parameter.
-	 * @param {String} [config.spaceId] Override the spaceId. Can also be overriden using a query parameter.
-	 * @param {String} [config.userId] Override the userId. Can also be overriden using a query parameter.
-	 * @return {Promise}
-	 * @memberof module:altspace/utilities/sync
-	 **/
-	//todo clients
-	function connect(config) {
-		config = config || {};
-
-		var url = new Url();
-
-		// Our ref used for example apps. Data may be cleared periodically.
-		var baseRefUrl = config.baseRefUrl || 'https://altspace-apps.firebaseio.com/apps/examples/';
-		var baseRef = new Firebase(baseRefUrl);
-
-		// Gather query paramaters (some may only be used as testing overrides)
-		var instanceId = config.instanceId || url.query['altspace-sync-instance'];
-		var spaceId = config.spaceId || url.query['altspace-sync-space'];
-		var userId = config.userId || url.query['altspace-sync-user'];
-
-		if (!config.appId || !config.authorId) {
-			throw new Error('Both the appId and authorId must be provided to connect.');
-		}
-
-		var tasks = [];
-		if (inAltspace) {
-			if (!spaceId) tasks.unshift(altspace.getSpace());
-			if (!userId) tasks.unshift(altspace.getUser());
-		}
-
-		function getRefs() {
-			var refs = {};
-
-			var projectId = getProjectId(config.appId, config.authorId, canonicalUrl);
-			refs.app = baseRef.child(projectId).child('app');
-			refs.space = spaceId ? refs.app.child('spaces').child(spaceId) : null;
-			refs.user = userId ? refs.app.child('users').child(userId) : null;
-
-			var instancesRef = refs.app.child('instances');
-			if (instanceId) {
-				refs.instance = instancesRef.child(instanceId);
-			} else {
-				refs.instance = instancesRef.push();
-				instanceId = refs.instance.key();
-			}
-			return refs;
-		}
-
-		function updateUrl() {
-			if (!url.query['altspace-sync-instance']) {
-				url.query['altspace-sync-instance'] = instanceId;
-				window.location.href = url.toString();
-			}
-		}
-
-		return Promise.all(tasks).then(function (results) {
-			if (inAltspace) {
-				if (!spaceId) spaceId = results.pop().sid;
-				if (!userId) userId = results.pop().userId;
-			}
-
-			spaceId = dashEscape(spaceId);
-			userId = dashEscape(userId);
-			instanceId = dashEscape(instanceId);
-
-			var connection = getRefs();
-
-			updateUrl();
-
-			return connection;
-		});
-	}
+  /**
+    * A Firebase reference for the app.
+    * This can be used for things like persistent high-scores, dynamic configuration, or inter-instance communication.
+    * @instance
+    * @member {Firebase} app
+    * @memberof module:altspace/utilities/sync~Connection
+    */
 
 
-	/**
-	 * Returns a firebase instance, just as if you had called new Firebase()  
-	 *
-	 * By using syncInstance.parent() you can store cross-instance data like high scores. Likewise you can store persistent user data at syncInstance.parent().child([userId).
-	 * @deprecated The connect function can do this and more! Please switch to using it instead. This function will be removed in the next major version
-	 * @method getInstance
-	 * @param {Object} params
-	 * @param {String} params.appId An identifier for your app.
-	 * @param {String} [params.instanceId] An id for a particular instance of
-	 *  your app. Leave this blank if you would like to have one automatically generated and appended as a query string.
-	 * @param {String} [params.authorId] An identifier for the author of the
-	 *  app.
-	 * @return {Firebase}
-	 * @memberof module:altspace/utilities/sync
-	 * @example
-	 *  var syncInstance = altspace.utilities.sync.getInstance({
-	 *      // All sync instances with the same instance id will share 
-	 *      // properties. 
-	 *      instanceId: yourInstanceId, 
-	 *      // This helps to prevent collisions.
-	 *      authorId: yourAuthorId  
-	 *  });
-	 */
-	return {
-		connect: connect,
-		getInstance: getInstance,
-		authenticate: deprecatedAuthenticate
-	};
-	
+  /**
+   * Connect to a sync session to obtain Firebase references that can be used for syncronization of real-time and persistent state.
+   * Returns a promise that will fulfill with a [Connection]{@link module:altspace/utilities/sync~Connection}.
+   *
+   * @method connect
+   * @param {Object} config
+   * @param {String} config.authorId A unique identifier for yourself or your organization
+   * @param {String} config.appId The name of your app
+   * @param {String} [config.baseRefUrl] Override the base reference. Set this to use your own Firebase.
+   * @param {String} [config.instanceId] Override the instanceId. Can also be overriden using a query parameter.
+   * @param {String} [config.spaceId] Override the spaceId. Can also be overriden using a query parameter.
+   * @param {String} [config.userId] Override the userId. Can also be overriden using a query parameter.
+   * @return {Promise}
+   * @memberof module:altspace/utilities/sync
+   **/
+  //todo clients
+  function connect(config) {
+    config = config || {};
+
+    var url = new Url();
+
+    // Our ref used for example apps. Data may be cleared periodically.
+    var baseRefUrl = config.baseRefUrl || 'https://altspace-apps.firebaseio.com/apps/examples/';
+    var baseRef = new Firebase(baseRefUrl);
+
+    // Gather query paramaters (some may only be used as testing overrides)
+    var instanceId = config.instanceId || url.query['altspace-sync-instance'];
+    var spaceId = config.spaceId || url.query['altspace-sync-space'];
+    var userId = config.userId || url.query['altspace-sync-user'];
+
+    if (!config.appId || !config.authorId) {
+      throw new Error('Both the appId and authorId must be provided to connect.');
+    }
+
+    var tasks = [];
+    if (inAltspace) {
+      if (!spaceId) tasks.unshift(altspace.getSpace());
+      if (!userId) tasks.unshift(altspace.getUser());
+    }
+
+    function getRefs() {
+      var refs = {};
+
+      var projectId = getProjectId(config.appId, config.authorId, canonicalUrl);
+      refs.app = baseRef.child(projectId).child('app');
+      refs.space = spaceId ? refs.app.child('spaces').child(spaceId) : null;
+      refs.user = userId ? refs.app.child('users').child(userId) : null;
+
+      var instancesRef = refs.app.child('instances');
+      if (instanceId) {
+        refs.instance = instancesRef.child(instanceId);
+      } else {
+        refs.instance = instancesRef.push();
+        instanceId = refs.instance.key();
+      }
+      return refs;
+    }
+
+    function updateUrl() {
+      if (!url.query['altspace-sync-instance']) {
+        url.query['altspace-sync-instance'] = instanceId;
+        window.location.href = url.toString();
+      }
+    }
+
+    return Promise.all(tasks).then(function (results) {
+      if (inAltspace) {
+        if (!spaceId) spaceId = results.pop().sid;
+        if (!userId) userId = results.pop().userId;
+      }
+
+      spaceId = dashEscape(spaceId);
+      userId = dashEscape(userId);
+      instanceId = dashEscape(instanceId);
+
+      var connection = getRefs();
+
+      updateUrl();
+
+      return connection;
+    });
+  }
+
+
+  /**
+   * Returns a firebase instance, just as if you had called new Firebase()
+   *
+   * By using syncInstance.parent() you can store cross-instance data like high scores. Likewise you can store persistent user data at syncInstance.parent().child([userId).
+   * @deprecated The connect function can do this and more! Please switch to using it instead. This function will be removed in the next major version
+   * @method getInstance
+   * @param {Object} params
+   * @param {String} params.appId An identifier for your app.
+   * @param {String} [params.instanceId] An id for a particular instance of
+   *  your app. Leave this blank if you would like to have one automatically generated and appended as a query string.
+   * @param {String} [params.authorId] An identifier for the author of the
+   *  app.
+   * @return {Firebase}
+   * @memberof module:altspace/utilities/sync
+   * @example
+   *  var syncInstance = altspace.utilities.sync.getInstance({
+   *      // All sync instances with the same instance id will share
+   *      // properties.
+   *      instanceId: yourInstanceId,
+   *      // This helps to prevent collisions.
+   *      authorId: yourAuthorId
+   *  });
+   */
+  return {
+    connect: connect,
+    getInstance: getInstance,
+    authenticate: deprecatedAuthenticate
+  };
+
 }());
 
 /**
@@ -3066,130 +3067,130 @@ altspace.utilities.sync = (function () {
  * @module altspace/utilities/codePen
  */
 altspace.utilities.codePen = (function () {
-	var exports = {};
+  var exports = {};
 
-	var Please = window.Please;
-	var Url = window.Url;
+  var Please = window.Please;
+  var Url = window.Url;
 
-	var name = 'VR CodePen';
-	var inTile = window.name && window.name.slice(0, 4) === 'pen-';
-	var inVR = !!window.altspace.inClient;
-	var inCodePen = !!location.href.match('codepen.io/');
+  var name = 'VR CodePen';
+  var inTile = window.name && window.name.slice(0, 4) === 'pen-';
+  var inVR = !!window.altspace.inClient;
+  var inCodePen = !!location.href.match('codepen.io/');
 
-	function printDebugInfo() {
-		console.log("In a tile: " + inTile);
-		console.log("In VR: " + inVR);
-	}
+  function printDebugInfo() {
+    console.log("In a tile: " + inTile);
+    console.log("In VR: " + inVR);
+  }
 
-	/**
-	 * Will stop code exection and post a message informing the user to 
-	 * open the example in VR  
-	 * @method ensureInVR
-	 * @memberof module:altspace/utilities/codePen
-	 */
-	function ensureInVR() {
-		if (inTile || !inVR) //inTile && inAltspace
-		{
-			var css = document.createElement("style");
-			css.type = "text/css";
-			css.innerHTML = "@import url(https://fonts.googleapis.com/css?family=Open+Sans:800);.altspace-info{text-align:center;font-family:'Open Sans',sans-serif;line-height:.5}.altspace-vr-notice{color:rgba(0,0,0,.7);font-size:5vw}.altspace-pen-name{font-size:7vw}";
-			document.head.appendChild(css);
+  /**
+   * Will stop code exection and post a message informing the user to 
+   * open the example in VR  
+   * @method ensureInVR
+   * @memberof module:altspace/utilities/codePen
+   */
+  function ensureInVR() {
+    if (inTile || !inVR) //inTile && inAltspace
+    {
+      var css = document.createElement("style");
+      css.type = "text/css";
+      css.innerHTML = "@import url(https://fonts.googleapis.com/css?family=Open+Sans:800);.altspace-info{text-align:center;font-family:'Open Sans',sans-serif;line-height:.5}.altspace-vr-notice{color:rgba(0,0,0,.7);font-size:5vw}.altspace-pen-name{font-size:7vw}";
+      document.head.appendChild(css);
 
-			document.body.style.background = Please.make_color({ seed: getPenId() });
+      document.body.style.background = Please.make_color({ seed: getPenId() });
 
-			var info = document.createElement("div");
-			info.className = "altspace-info";
-			document.body.appendChild(info);
+      var info = document.createElement("div");
+      info.className = "altspace-info";
+      document.body.appendChild(info);
 
-			var nameEl = document.createElement("span");
-			nameEl.className = "altspace-pen-name";
-			nameEl.innerHTML = '<p>' + name.toUpperCase() + '</p>';
-			info.appendChild(nameEl);
+      var nameEl = document.createElement("span");
+      nameEl.className = "altspace-pen-name";
+      nameEl.innerHTML = '<p>' + name.toUpperCase() + '</p>';
+      info.appendChild(nameEl);
 
-			if (inTile) {
-				var errorMsg = 'VR mode does not support preview tiles. Stopping code execution.';
-				console.log('ERROR: ' + errorMsg);
-				throw new Error(errorMsg);
-			}
+      if (inTile) {
+        var errorMsg = 'VR mode does not support preview tiles. Stopping code execution.';
+        console.log('ERROR: ' + errorMsg);
+        throw new Error(errorMsg);
+      }
 
-			if (!inVR) {
+      if (!inVR) {
 
-				var launchEl = document.createElement("span");
-				launchEl.className = "altspace-vr-notice";
-				launchEl.innerHTML = '<p>View</p>';
-				info.insertBefore(launchEl, nameEl);
+        var launchEl = document.createElement("span");
+        launchEl.className = "altspace-vr-notice";
+        launchEl.innerHTML = '<p>View</p>';
+        info.insertBefore(launchEl, nameEl);
 
-				var notice = document.createElement("span");
-				notice.className = "altspace-vr-notice";
-				notice.innerHTML = '<p>in <a href="http://altvr.com"> AltspaceVR </a></p>';
-				info.appendChild(notice);
-
-
-				var errorMsg = 'Not in VR mode. Stopping code execution.';
-				if (inTile) {
-					console.log('ERROR: ' + errorMsg);//thrown error message not displayed in console when inTile, log it
-				}
-				throw new Error(errorMsg);
-			}
-			return;
-
-		}
-	}
-
-	/**
-	 * Sets the name to be used by ensureInVR()  
-	 * @method setName
-	 * @param {String} name
-	 * @memberof module:altspace/utilities/codePen
-	 */
-	function setName(n) {//TODO: A better method for this would be awesome
-		name = n;
-	}
-
-	function getParsedUrl() {
-		var canonicalElement = document.querySelector('link[rel=canonical]');
-		var fullUrl = canonicalElement ? canonicalElement.href : window.location.href;
-		return new Url(fullUrl);
-	}
+        var notice = document.createElement("span");
+        notice.className = "altspace-vr-notice";
+        notice.innerHTML = '<p>in <a href="http://altvr.com"> AltspaceVR </a></p>';
+        info.appendChild(notice);
 
 
-	/**
-	 * Returns the pen ID, useful for setting the sync instanceId.
-	 * @method getPenId
-	 * @return {String}
-	 * @memberof module:altspace/utilities/codePen
-	 */
-	function getPenId() {
-		var url = getParsedUrl();
-		var splitPath = url.path.split('/');
-		var id = splitPath[splitPath.length - 1];
-		return id;
-	}
+        var errorMsg = 'Not in VR mode. Stopping code execution.';
+        if (inTile) {
+          console.log('ERROR: ' + errorMsg);//thrown error message not displayed in console when inTile, log it
+        }
+        throw new Error(errorMsg);
+      }
+      return;
 
-	/**
-	 * Returns the pen author ID, useful for setting the sync authorId.
-	 * @method getAuthorId
-	 * @return {String}
-	 * @memberof module:altspace/utilities/codePen
-	 */
-	function getAuthorId() {
-		var url = getParsedUrl();
-		var splitPath = url.path.split('/');
-		var isTeam = splitPath[1] == 'team';
-		var id = isTeam ? 'team-' + splitPath[2] : splitPath[1];
-		return id;
-	}
+    }
+  }
 
-	return {
-		inTile: inTile,
-		inVR: inVR,
-		inCodePen: inCodePen,
-		ensureInVR: ensureInVR,
-		setName: setName,
-		getPenId: getPenId,
-		getAuthorId: getAuthorId,
-		printDebugInfo: printDebugInfo
-	};
+  /**
+   * Sets the name to be used by ensureInVR()  
+   * @method setName
+   * @param {String} name
+   * @memberof module:altspace/utilities/codePen
+   */
+  function setName(n) {//TODO: A better method for this would be awesome
+    name = n;
+  }
+
+  function getParsedUrl() {
+    var canonicalElement = document.querySelector('link[rel=canonical]');
+    var fullUrl = canonicalElement ? canonicalElement.href : window.location.href;
+    return new Url(fullUrl);
+  }
+
+
+  /**
+   * Returns the pen ID, useful for setting the sync instanceId.
+   * @method getPenId
+   * @return {String}
+   * @memberof module:altspace/utilities/codePen
+   */
+  function getPenId() {
+    var url = getParsedUrl();
+    var splitPath = url.path.split('/');
+    var id = splitPath[splitPath.length - 1];
+    return id;
+  }
+
+  /**
+   * Returns the pen author ID, useful for setting the sync authorId.
+   * @method getAuthorId
+   * @return {String}
+   * @memberof module:altspace/utilities/codePen
+   */
+  function getAuthorId() {
+    var url = getParsedUrl();
+    var splitPath = url.path.split('/');
+    var isTeam = splitPath[1] == 'team';
+    var id = isTeam ? 'team-' + splitPath[2] : splitPath[1];
+    return id;
+  }
+
+  return {
+    inTile: inTile,
+    inVR: inVR,
+    inCodePen: inCodePen,
+    ensureInVR: ensureInVR,
+    setName: setName,
+    getPenId: getPenId,
+    getAuthorId: getAuthorId,
+    printDebugInfo: printDebugInfo
+  };
 }());
 
 window.altspace = window.altspace || {};
@@ -3204,7 +3205,7 @@ window.altspace.utilities = window.altspace.utilities || {};
  *
  * If all of your application logic is in behaviors, you do not need to create any additional requestAnimationFrame loops.
  *
- * It also automatically uses the WebGL renderer when running in a 
+ * It also automatically uses the WebGL renderer when running in a
  * desktop browser and emulates cursor events with mouse clicks.
  * @class Simulation
  * @param {Object} [config] Optional parameters.
@@ -3212,113 +3213,127 @@ window.altspace.utilities = window.altspace.utilities || {};
  * @memberof module:altspace/utilities
  */
 altspace.utilities.Simulation = function (config) {
-	config = config || {};
-	if (config.auto === undefined) config.auto = true;
+  config = config || {};
+  if (config.auto === undefined) config.auto = true;
 
-	var exports = {};
-	var scene = new THREE.Scene();
-	var renderer;
-	var camera;
+  var exports = {};
+  var scene;
+  var renderer;
+  var camera;
+  var usingAFrame = window.AFRAME && document.querySelector('a-scene');
 
-	setup();
+  setup();
 
-	function loop() {
-		window.requestAnimationFrame(loop);
+  function loop() {
+    window.requestAnimationFrame(loop);
 
-		if (scene.updateAllBehaviors)
-			scene.updateAllBehaviors();
+    if (scene.updateAllBehaviors)
+      scene.updateAllBehaviors();
 
-		renderer.render(scene, camera);
-	}
+    renderer.render(scene, camera);
+  }
 
-	function setup() {
-		function setupAltspace() {
-			renderer = altspace.getThreeJSRenderer();
-			camera = new THREE.PerspectiveCamera(); // TODO: change from shim to symbolic
-		}
+  function setup() {
+    function setupAframe(){
+      var ascene = document.querySelector('a-scene');
+      scene = ascene.object3D;
+      renderer = ascene.renderer;
 
-		function setupWebGL() {
-			renderer = new THREE.WebGLRenderer({antialias: true});
-			camera = new THREE.PerspectiveCamera();
-			camera.position.z = 500;
+      var acamera = document.querySelector('a-camera');
+      if(acamera)
+        camera = acamera.object3D;
+    }
+    function setupAltspace() {
+      scene = new THREE.Scene();
+      renderer = altspace.getThreeJSRenderer();
+      camera = new THREE.PerspectiveCamera(); // TODO: change from shim to symbolic
+    }
 
-			var resizeRender = function () {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
-				renderer.setSize(window.innerWidth, window.innerHeight);
-			};
-			document.addEventListener("DOMContentLoaded", function (event) {
-				document.body.style.margin = '0px';
-				document.body.style.overflow = 'hidden';
-				renderer.setClearColor('#035F72');
-				var container = document.createElement('div');
-				document.body.appendChild(container);
-				container.appendChild(renderer.domElement);
-			});
-			window.addEventListener('resize', resizeRender);
-			resizeRender();
-			camera.fov = 45;
-			camera.near = 1;
-			camera.far = 2000;
-			scene.add(camera);
-			scene.add(new THREE.AmbientLight('white'));
+    function setupWebGL() {
+      scene = new THREE.Scene();
+      renderer = new THREE.WebGLRenderer({antialias: true});
+      camera = new THREE.PerspectiveCamera();
+      camera.position.z = 500;
 
-			var shouldShimCursor = altspace && altspace.utilities && altspace.utilities.shims && altspace.utilities.shims.cursor;
-			if (shouldShimCursor) altspace.utilities.shims.cursor.init(scene, camera);
-		}
+      var resizeRender = function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      };
+      document.addEventListener("DOMContentLoaded", function (event) {
+        document.body.style.margin = '0px';
+        document.body.style.overflow = 'hidden';
+        renderer.setClearColor('#035F72');
+        var container = document.createElement('div');
+        document.body.appendChild(container);
+        container.appendChild(renderer.domElement);
+      });
+      window.addEventListener('resize', resizeRender);
+      resizeRender();
+      camera.fov = 45;
+      camera.near = 1;
+      camera.far = 2000;
+      scene.add(camera);
+      scene.add(new THREE.AmbientLight('white'));
 
-		if (altspace && altspace.inClient) {
-			setupAltspace();
-		} else {
-			setupWebGL();
-		}
-	}
+      var shouldShimCursor = altspace && altspace.utilities && altspace.utilities.shims && altspace.utilities.shims.cursor;
+      if (shouldShimCursor) altspace.utilities.shims.cursor.init(scene, camera);
+    }
 
-	if (config.auto) window.requestAnimationFrame(loop);
+    if(usingAFrame){
+      setupAframe();
+    } else if (window.altspace && altspace.inClient) {
+      setupAltspace();
+    } else {
+      setupWebGL();
+    }
+  }
+
+  if (config.auto && !usingAFrame) window.requestAnimationFrame(loop);
 
 
-	/**
-	 * The simulation scene.
-	 * @readonly
-	 * @instance
-	 * @member {THREE.Scene} scene
-	 * @memberof module:altspace/utilities.Simulation
-	 */
-	Object.defineProperty(exports, 'scene', {
-		get: function () {
-			return scene;
-		}
-	})
+  /**
+   * The simulation scene.
+   * @readonly
+   * @instance
+   * @member {THREE.Scene} scene
+   * @memberof module:altspace/utilities.Simulation
+   */
+  Object.defineProperty(exports, 'scene', {
+    get: function () {
+      return scene;
+    }
+  })
 
-	/**
-	 * The renderer being used.
-	 * @readonly
-	 * @instance
-	 * @member {(THREE.WebGLRenderer|AltRenderer)} renderer
-	 * @memberof module:altspace/utilities.Simulation
-	 */
-	Object.defineProperty(exports, 'renderer', {
-		get: function () {
-			return renderer;
-		}
-	})
+  /**
+   * The renderer being used.
+   * @readonly
+   * @instance
+   * @member {(THREE.WebGLRenderer|AltRenderer)} renderer
+   * @memberof module:altspace/utilities.Simulation
+   */
+  Object.defineProperty(exports, 'renderer', {
+    get: function () {
+      return renderer;
+    }
+  })
 
-	/**
-	 * The camera being used by the WebGL renderer.
-	 * @readonly
-	 * @instance
-	 * @member {Three.Camera} camera
-	 * @memberof module:altspace/utilities.Simulation
-	 */
-	Object.defineProperty(exports, 'camera', {
-		get: function () {
-			return camera;
-		},
-		set: function (value) {
-			camera = value;
-		}
-	})
-	return exports;
+  /**
+   * The camera being used by the WebGL renderer.
+   * @readonly
+   * @instance
+   * @member {Three.Camera} camera
+   * @memberof module:altspace/utilities.Simulation
+   */
+  Object.defineProperty(exports, 'camera', {
+    get: function () {
+      return camera;
+    },
+    set: function (value) {
+      camera = value;
+    }
+  })
+  return exports;
 }
 
 window.altspace = window.altspace || {};
@@ -3326,92 +3341,92 @@ window.altspace.utilities = window.altspace.utilities || {};
 
 
 altspace.utilities.multiloader = (function(){
-	var loader;
-	var TRACE;
-	var baseUrl = '';
-	var crossOrigin = '';//assigned to THREE.MTLLoader.crossOrigin
+  var loader;
+  var TRACE;
+  var baseUrl = '';
+  var crossOrigin = '';//assigned to THREE.MTLLoader.crossOrigin
 
-	function LoadRequest(){
-		//To create loadRequst: new MultiLoader.LoadRequest()
+  function LoadRequest(){
+    //To create loadRequst: new MultiLoader.LoadRequest()
 
-		var objUrls = [];//Paths to model geometry file, in Wavefront OBJ format.
-		var mtlUrls = [];//Paths to model materials file, in Wavefront MTL format.
-		var objects = [];//objects[i] is result of loader.load(objUrl[i], mtlUrl[i])
-		var error;//String indicating loading error with at least one file.
-		var objectsLoaded = 0;//Used internally to determine when loading complete.
+    var objUrls = [];//Paths to model geometry file, in Wavefront OBJ format.
+    var mtlUrls = [];//Paths to model materials file, in Wavefront MTL format.
+    var objects = [];//objects[i] is result of loader.load(objUrl[i], mtlUrl[i])
+    var error;//String indicating loading error with at least one file.
+    var objectsLoaded = 0;//Used internally to determine when loading complete.
 
-		return {
-			objUrls: objUrls,
-			mtlUrls: mtlUrls,
-			objects: objects,
-			error: error,
-			objectsLoaded: objectsLoaded
-		};
+    return {
+      objUrls: objUrls,
+      mtlUrls: mtlUrls,
+      objects: objects,
+      error: error,
+      objectsLoaded: objectsLoaded
+    };
 
-	}//end of LoadRequest
+  }//end of LoadRequest
 
-	function init(params){
-		var p = params || {};
-		TRACE = p.TRACE || false;
-		if (p.crossOrigin) crossOrigin = p.crossOrigin;
-		if (p.baseUrl) baseUrl = p.baseUrl;
-		if (baseUrl.slice(-1) !== '/') baseUrl += '/';
+  function init(params){
+    var p = params || {};
+    TRACE = p.TRACE || false;
+    if (p.crossOrigin) crossOrigin = p.crossOrigin;
+    if (p.baseUrl) baseUrl = p.baseUrl;
+    if (baseUrl.slice(-1) !== '/') baseUrl += '/';
 
-		loader = new altspace.utilities.shims.OBJMTLLoader();
-		loader.crossOrigin = crossOrigin;
-		if (TRACE) console.log('MultiLoader initialized with params', params);
-	}
+    loader = new altspace.utilities.shims.OBJMTLLoader();
+    loader.crossOrigin = crossOrigin;
+    if (TRACE) console.log('MultiLoader initialized with params', params);
+  }
 
-	function load(loadRequest, onComplete){
-		var req = loadRequest;
-		var start = Date.now();
-		if (!req || !req instanceof LoadRequest){
-			throw new Error('MultiLoader.load expects first arg of type LoadRequest');
-		}
-		if (!onComplete || typeof(onComplete) !== 'function'){
-			throw new Error('MultiLoader.load expects second arg of type function');
-		}
-		if (!req.objUrls || !req.mtlUrls || req.objUrls.length !== req.mtlUrls.length){
-			throw new Error('MultiLoader.load called with bad LoadRequest');
-		}
-		var reqCount = req.objUrls.length;
-		if (TRACE) console.log('Loading models...')
-		for (var i=0; i < reqCount; i++){
-			var loadModel = function(req, i){//We need i in the closure to store result.
-				var objUrl = baseUrl + req.objUrls[i];
-				var mtlUrl = baseUrl + req.mtlUrls[i];
-				if (TRACE) console.log('Loading obj:'+objUrl+', mtl:'+mtlUrl);
-				loader.load(objUrl, mtlUrl, function(object3d){//onLoaded
-					req.objects[i] = object3d;
-					req.objectsLoaded++;
-					if(req.objectsLoaded === reqCount){
-						var elapsed = ((Date.now()-start)/1000.0).toFixed(2);
-						if (TRACE) console.log('Loaded '+reqCount+' models in '+elapsed+' seconds');
-						onComplete();
-					}
-				}, onProgress, function(){//onError 
-					var url = xhr.target.responseURL || '';
-					req.error = 'Error loading file '+url;
-				});
-			};
-			loadModel(req, i);
-		}
-	}
+  function load(loadRequest, onComplete){
+    var req = loadRequest;
+    var start = Date.now();
+    if (!req || !req instanceof LoadRequest){
+      throw new Error('MultiLoader.load expects first arg of type LoadRequest');
+    }
+    if (!onComplete || typeof(onComplete) !== 'function'){
+      throw new Error('MultiLoader.load expects second arg of type function');
+    }
+    if (!req.objUrls || !req.mtlUrls || req.objUrls.length !== req.mtlUrls.length){
+      throw new Error('MultiLoader.load called with bad LoadRequest');
+    }
+    var reqCount = req.objUrls.length;
+    if (TRACE) console.log('Loading models...')
+    for (var i=0; i < reqCount; i++){
+      var loadModel = function(req, i){//We need i in the closure to store result.
+        var objUrl = baseUrl + req.objUrls[i];
+        var mtlUrl = baseUrl + req.mtlUrls[i];
+        if (TRACE) console.log('Loading obj:'+objUrl+', mtl:'+mtlUrl);
+        loader.load(objUrl, mtlUrl, function(object3d){//onLoaded
+          req.objects[i] = object3d;
+          req.objectsLoaded++;
+          if(req.objectsLoaded === reqCount){
+            var elapsed = ((Date.now()-start)/1000.0).toFixed(2);
+            if (TRACE) console.log('Loaded '+reqCount+' models in '+elapsed+' seconds');
+            onComplete();
+          }
+        }, onProgress, function(){//onError 
+          var url = xhr.target.responseURL || '';
+          req.error = 'Error loading file '+url;
+        });
+      };
+      loadModel(req, i);
+    }
+  }
 
-	function onProgress(xhr){
-		if (xhr.lengthComputable && xhr.target.responseURL) {
-			//Skip progress log if no xhr url, meaning it's a local file.
-			var percentComplete = xhr.loaded / xhr.total * 100;
-			var filename = xhr.target.responseURL.split('/').pop();
-			if (TRACE) console.log('...'+filename+' '+Math.round(percentComplete,2)+'% downloaded');
-		}
-	}
+  function onProgress(xhr){
+    if (xhr.lengthComputable && xhr.target.responseURL) {
+      //Skip progress log if no xhr url, meaning it's a local file.
+      var percentComplete = xhr.loaded / xhr.total * 100;
+      var filename = xhr.target.responseURL.split('/').pop();
+      if (TRACE) console.log('...'+filename+' '+Math.round(percentComplete,2)+'% downloaded');
+    }
+  }
 
-	return {
-		init: init,
-		load: load,
-		LoadRequest: LoadRequest,
-	};
+  return {
+    init: init,
+    load: load,
+    LoadRequest: LoadRequest,
+  };
 
 }());
 
@@ -3420,9 +3435,9 @@ altspace.utilities.multiloader = (function(){
  */
 
 /**
- * The AltspaceDK includes a Behaviors shim that adds Behavior capabilities to 
+ * The AltspaceDK includes a Behaviors shim that adds Behavior capabilities to
  * Three.js.
- * It adds methods to Three.js' Scene and Object3D classes which allow you to 
+ * It adds methods to Three.js' Scene and Object3D classes which allow you to
  * add, remove, retrieve and use Behaviors.
  *
  * @namespace THREE
@@ -3437,35 +3452,35 @@ altspace.utilities.multiloader = (function(){
 /**
  * Update the behaviors of all the objects in this Scene.
  * @instance
- * @method updateAllBehaviors 
+ * @method updateAllBehaviors
  * @memberof THREE.Scene
  */
 THREE.Scene.prototype.updateAllBehaviors = function () {
 
-	var now = performance.now();
-	var lastNow = this.__lastNow || now;
+  var now = performance.now();
+  var lastNow = this.__lastNow || now;
 
-	var deltaTime = now - lastNow;
+  var deltaTime = now - lastNow;
 
-	var self = this;
+  var self = this;
 
-	//gather objects first so that behaviors can change the hierarchy during traversal without incident
-	var objectsWithBehaviors = [];
+  //gather objects first so that behaviors can change the hierarchy during traversal without incident
+  var objectsWithBehaviors = [];
 
-	this.traverse(function (object3d) {
+  this.traverse(function (object3d) {
 
-		if (object3d.__behaviorList) {
-			objectsWithBehaviors.push(object3d);
-		}
+    if (object3d.__behaviorList) {
+      objectsWithBehaviors.push(object3d);
+    }
 
-	});
+  });
 
-	for (var i = 0, max = objectsWithBehaviors.length; i < max; i++) {
-		object3d = objectsWithBehaviors[i];
-		object3d.updateBehaviors(deltaTime, self);
-	}
+  for (var i = 0, max = objectsWithBehaviors.length; i < max; i++) {
+    var object3d = objectsWithBehaviors[i];
+    object3d.updateBehaviors(deltaTime, self);
+  }
 
-	this.__lastNow = now;
+  this.__lastNow = now;
 
 }
 
@@ -3478,14 +3493,14 @@ THREE.Scene.prototype.updateAllBehaviors = function () {
 /**
  * Adds the given behavior to this object.
  * @instance
- * @method addBehavior 
+ * @method addBehavior
  * @param {Behavior} behavior Behavior to add.
  * @memberof THREE.Object3D
  */
 THREE.Object3D.prototype.addBehavior = function()
 {
-	this.__behaviorList = this.__behaviorList || [];
-	Array.prototype.push.apply(this.__behaviorList, arguments);
+  this.__behaviorList = this.__behaviorList || [];
+  Array.prototype.push.apply(this.__behaviorList, arguments);
 }
 
 /**
@@ -3497,39 +3512,41 @@ THREE.Object3D.prototype.addBehavior = function()
  */
 THREE.Object3D.prototype.addBehaviors = function()
 {
-	this.__behaviorList = this.__behaviorList || [];
-	Array.prototype.push.apply(this.__behaviorList, arguments);
+  this.__behaviorList = this.__behaviorList || [];
+  Array.prototype.push.apply(this.__behaviorList, arguments);
 }
 
 /**
  * Removes the given behavior from this object. The behavior is disposed if
  * possible.
  * @instance
- * @method removeBehavior 
+ * @method removeBehavior
  * @param {...Behavior} behavior Behavior to remove.
  * @memberof THREE.Object3D
  */
 THREE.Object3D.prototype.removeBehavior = function(behavior)
 {
-	var i = this.__behaviorList.indexOf(behavior);
-	if (i !== -1) {
-		this.__behaviorList.splice(i, 1);
-		try {
+  if (!this.__behaviorList || this.__behaviorList.length === 0) return null;
 
-			if (behavior.dispose) behavior.dispose.call(behavior, this);
+  var i = this.__behaviorList.indexOf(behavior);
+  if (i !== -1) {
+    this.__behaviorList.splice(i, 1);
+    try {
 
-		} catch (error) {
-			
-			console.group();
-			(console.error || console.log).call(console, error.stack || error);
-			console.log('[Behavior]');
-			console.log(behavior);
-			console.log('[Object3D]');
-			console.log(this);
-			console.groupEnd();
+      if (behavior.dispose) behavior.dispose.call(behavior, this);
 
-		}
-	}
+    } catch (error) {
+
+      console.group();
+      (console.error || console.log).call(console, error.stack || error);
+      console.log('[Behavior]');
+      console.log(behavior);
+      console.log('[Object3D]');
+      console.log(this);
+      console.groupEnd();
+
+    }
+  }
 }
 
 /**
@@ -3541,44 +3558,46 @@ THREE.Object3D.prototype.removeBehavior = function(behavior)
  */
 THREE.Object3D.prototype.removeAllBehaviors = function ()
 {
-	if (!this.__behaviorList || this.__behaviorList.length === 0) return null;
+  if (!this.__behaviorList || this.__behaviorList.length === 0) return null;
 
-	for (var i = 0, max = this.__behaviorList.length; i < max; i++) {
-		var behavior = this.__behaviorList[i];
+  for (var i = 0, max = this.__behaviorList.length; i < max; i++) {
+    var behavior = this.__behaviorList[i];
 
-		try {
+    try {
 
-			if (behavior.dispose) behavior.dispose.call(behavior, this);
+      if (behavior.dispose) behavior.dispose.call(behavior, this);
 
-		} catch (error) {
+    } catch (error) {
 
-			console.group();
-			(console.error || console.log).call(console, error.stack || error);
-			console.log('[Behavior]');
-			console.log(behavior);
-			console.log('[Object3D]');
-			console.log(this);
-			console.groupEnd();
+      console.group();
+      (console.error || console.log).call(console, error.stack || error);
+      console.log('[Behavior]');
+      console.log(behavior);
+      console.log('[Object3D]');
+      console.log(this);
+      console.groupEnd();
 
-		}
-	}
+    }
+  }
+
+  this.__behaviorList.length = 0;
 }
 
 /**
  * Retrieve a behavior by type.
  * @instance
  * @method getBehaviorByType
- * @param {String} type 
+ * @param {String} type
  * @returns {Behavior}
  * @memberof THREE.Object3D
  */
 THREE.Object3D.prototype.getBehaviorByType = function(type) {
-	if (!this.__behaviorList || this.__behaviorList.length === 0) return null;
+  if (!this.__behaviorList || this.__behaviorList.length === 0) return null;
 
-	for (var i = 0, max = this.__behaviorList.length; i < max; i++) {
-		if (this.__behaviorList[i].type === type)
-			return this.__behaviorList[i];
-	}
+  for (var i = 0, max = this.__behaviorList.length; i < max; i++) {
+    if (this.__behaviorList[i].type === type)
+      return this.__behaviorList[i];
+  }
 }
 
 /**
@@ -3590,84 +3609,84 @@ THREE.Object3D.prototype.getBehaviorByType = function(type) {
  */
 THREE.Object3D.prototype.updateBehaviors = function(deltaTime, scene) {
 
-	if (!this.__behaviorList || this.__behaviorList.length === 0) return;
+  if (!this.__behaviorList || this.__behaviorList.length === 0) return;
 
-	var toInit = [];
-	var toUpdate = this.__behaviorList.slice(); // prevent mutation of the behavior list during this loop
+  var toInit = [];
+  var toUpdate = this.__behaviorList.slice(); // prevent mutation of the behavior list during this loop
 
-	for (var i = 0, max = this.__behaviorList.length; i < max; i++) {
+  for (var i = 0, max = this.__behaviorList.length; i < max; i++) {
 
-		var behavior = this.__behaviorList[i];
-		if (!behavior.__isInitialized) toInit.push(behavior);
+    var behavior = this.__behaviorList[i];
+    if (!behavior.__isInitialized) toInit.push(behavior);
 
-	}
+  }
 
-	//Awake
-	for (var i = 0, max = toInit.length; i < max; i++) {
+  //Awake
+  for (var i = 0, max = toInit.length; i < max; i++) {
 
-		var behavior = toInit[i];
-		try {
+    var behavior = toInit[i];
+    try {
 
-			if (behavior.awake) behavior.awake.call(behavior, this, scene);
+      if (behavior.awake) behavior.awake.call(behavior, this, scene);
 
-		} catch (error) {
+    } catch (error) {
 
-			console.group();
-			(console.error || console.log).call(console, error.stack || error);
-			console.log('[Behavior]');
-			console.log(behavior);
-			console.log('[Object3D]');
-			console.log(this);
-			console.groupEnd();
+      console.group();
+      (console.error || console.log).call(console, error.stack || error);
+      console.log('[Behavior]');
+      console.log(behavior);
+      console.log('[Object3D]');
+      console.log(this);
+      console.groupEnd();
 
-		}
+    }
 
-	}
+  }
 
-	//Start
-	for (var i = 0, max = toInit.length; i < max; i++) {
+  //Start
+  for (var i = 0, max = toInit.length; i < max; i++) {
 
-		var behavior = toInit[i];
-		try {
+    var behavior = toInit[i];
+    try {
 
-			if (behavior.start) behavior.start.call(behavior);
+      if (behavior.start) behavior.start.call(behavior);
 
-		} catch (error) {
+    } catch (error) {
 
-			console.group();
-			(console.error || console.log).call(console, error.stack || error);
-			console.log('[Behavior]');
-			console.log(behavior);
-			console.log('[Object3D]');
-			console.log(this);
-			console.groupEnd();
+      console.group();
+      (console.error || console.log).call(console, error.stack || error);
+      console.log('[Behavior]');
+      console.log(behavior);
+      console.log('[Object3D]');
+      console.log(this);
+      console.groupEnd();
 
-		}
-		behavior.__isInitialized = true;
+    }
+    behavior.__isInitialized = true;
 
-	}
+  }
 
-	//Update
-	for (var i = 0, max = toUpdate.length; i < max; i++) {
+  //Update
+  for (var i = 0, max = toUpdate.length; i < max; i++) {
 
-		var behavior = toUpdate[i];
-		try {
+    var behavior = toUpdate[i];
+    try {
 
-			if (behavior.update) behavior.update.call(behavior, deltaTime);
+      if (behavior.update) behavior.update.call(behavior, deltaTime);
 
-		} catch (error) {
+    } catch (error) {
 
-			console.group();
-			(console.error || console.log).call(console, error.stack || error);
-			console.log('[Behavior]');
-			console.log(behavior);
-			console.log('[Object3D]');
-			console.log(this);
-			console.groupEnd();
+      console.group();
+      (console.error || console.log).call(console, error.stack || error);
+      console.log('[Behavior]');
+      console.log(behavior);
+      console.log('[Object3D]');
+      console.log(this);
+      console.groupEnd();
 
-		}
+    }
 
-	}
+  }
 
 }
 
@@ -3677,125 +3696,130 @@ altspace = window.altspace || {};
 altspace.utilities = altspace.utilities || {};
 altspace.utilities.shims = altspace.utilities.shims || {};
 /**
- * Detects mouse move/up/down events, raycasts to find intersected objects, 
- * then dispatches cursor move/up/down/enter/leave events that mimics 
+ * Detects mouse move/up/down events, raycasts to find intersected objects,
+ * then dispatches cursor move/up/down/enter/leave events that mimics
  * Altspace events.
  * @module altspace/utilities/shims/cursor
  */
 altspace.utilities.shims.cursor = (function () {
-	//TODO: Support non-full window apps
+  //TODO: Support non-full window apps
 
-	var scene;
-	var camera;
-	var domElem;
+  var scene;
+  var camera;
+  var domElem;
 
-	var overObject;
+  var overObject;
 
-	var raycaster = new THREE.Raycaster();
+  var raycaster = new THREE.Raycaster();
 
-	/**
-	 * Initializes the cursor module 
-	 * @static
-	 * @method init
-	 * @param {THREE.Scene} scene
-	 * @param {THREE.Camera} camera - Camera used for raycasting.
-	 * @param {Object} [options] - An options object
-	 * @param {THREE.WebGLRenderer} [options.renderer] - If supplied, applies cursor movement to render target 
-	 *	instead of entire client
-	 * @memberof module:altspace/utilities/shims/cursor
-	 */
-	function init(_scene, _camera, _params) {
-		if (!_scene || !_scene instanceof THREE.Scene) {
-			throw new TypeError('Requires THREE.Scene argument');
-		}
-		if (!_camera || !_camera instanceof THREE.Camera) {
-			throw new TypeError('Requires THREE.Camera argument');
-		}
-		scene = _scene;
-		camera = _camera;
+  /**
+   * Initializes the cursor module
+   * @static
+   * @method init
+   * @param {THREE.Scene} scene
+   * @param {THREE.Camera} camera - Camera used for raycasting.
+   * @param {Object} [options] - An options object
+   * @param {THREE.WebGLRenderer} [options.renderer] - If supplied, applies cursor movement to render target
+   *  instead of entire client
+   * @memberof module:altspace/utilities/shims/cursor
+   */
+  function init(_scene, _camera, _params) {
+    if (!_scene || !_scene instanceof THREE.Scene) {
+      throw new TypeError('Requires THREE.Scene argument');
+    }
+    if (!_camera || !_camera instanceof THREE.Camera) {
+      throw new TypeError('Requires THREE.Camera argument');
+    }
+    scene = _scene;
+    camera = _camera;
 
-		p = _params || {};
-		domElem = p.renderer && p.renderer.domElement || window;
+    p = _params || {};
+    domElem = p.renderer && p.renderer.domElement || window;
 
-		domElem.addEventListener('mousedown', mouseDown, false)
-		domElem.addEventListener('mouseup', mouseUp, false)
-		domElem.addEventListener('mousemove', mouseMove, false)
-	}
+    domElem.addEventListener('mousedown', mouseDown, false)
+    domElem.addEventListener('mouseup', mouseUp, false)
+    domElem.addEventListener('mousemove', mouseMove, false)
+  }
 
-	function mouseDown(event) {
+  function mouseDown(event) {
 
-		var intersection = findIntersection(event);
-		if (!intersection || !intersection.point) return;
+    var intersection = findIntersection(event);
+    if (!intersection || !intersection.point) return;
 
-		var cursorEvent = createCursorEvent('cursordown', intersection);
-		intersection.object.dispatchEvent(cursorEvent);
-	}
+    var cursorEvent = createCursorEvent('cursordown', intersection);
+    intersection.object.dispatchEvent(cursorEvent);
+  }
 
-	function mouseUp(event) {
-		var intersection = findIntersection(event);
+  function mouseUp(event) {
+    var intersection = findIntersection(event);
 
-		var cursorEvent = createCursorEvent('cursorup', intersection);
+    var cursorEvent = createCursorEvent('cursorup', intersection);
 
-		if (intersection) {
-			intersection.object.dispatchEvent(cursorEvent);
-		} else {
-			scene.dispatchEvent(cursorEvent);
-		}
-	}
+    if (intersection) {
+      intersection.object.dispatchEvent(cursorEvent);
+    } else {
+      scene.dispatchEvent(cursorEvent);
+    }
+  }
 
-	function mouseMove(event) {
-		var intersection = findIntersection(event);
+  function mouseMove(event) {
+    var intersection = findIntersection(event);
 
-		var cursorEvent = createCursorEvent('cursormove', intersection);//TODO improve and don't fire only on scene
-		scene.dispatchEvent(cursorEvent);
+    var cursorEvent = createCursorEvent('cursormove', intersection);//TODO improve and don't fire only on scene
+    scene.dispatchEvent(cursorEvent);
 
-		var object = intersection ? intersection.object : null;
-		if (overObject != object) {
-			if (overObject) {
-				cursorEvent = createCursorEvent('cursorleave', intersection);
-				overObject.dispatchEvent(cursorEvent);
-			}
+    var object = intersection ? intersection.object : null;
+    if (overObject != object) {
+      if (overObject) {
+        cursorEvent = createCursorEvent('cursorleave', intersection);
+        overObject.dispatchEvent(cursorEvent);
+      }
 
-			if (object) {
-				cursorEvent = createCursorEvent('cursorenter', intersection);
-				object.dispatchEvent(cursorEvent);
-			}
+      if (object) {
+        cursorEvent = createCursorEvent('cursorenter', intersection);
+        object.dispatchEvent(cursorEvent);
+      }
 
-			overObject = object;
-		}
-	}
+      overObject = object;
+    }
+  }
 
-	function createCursorEvent(type, intersection) {
-		return {
-			type: type,
-			bubbles: true,
-			target: intersection ? intersection.object : null,
-			ray: {
-				origin: raycaster.ray.origin.clone(),
-				direction: raycaster.ray.direction.clone()
-			},
-			point: intersection ? intersection.point.clone() : null
-		}
-	}
+  function createCursorEvent(type, intersection) {
+    return {
+      type: type,
+      bubbles: true,
+      target: intersection ? intersection.object : null,
+      ray: {
+        origin: raycaster.ray.origin.clone(),
+        direction: raycaster.ray.direction.clone()
+      },
+      point: intersection ? intersection.point.clone() : null
+    }
+  }
 
-	function findIntersection(mouseEvent) {
-		var mouse = new THREE.Vector2();
-		mouse.x = (mouseEvent.offsetX / (domElem.width || domElem.innerWidth)) * 2 - 1;
-		mouse.y = -(mouseEvent.offsetY / (domElem.height || domElem.innerHeight)) * 2 + 1;
+  function findIntersection(mouseEvent) {
+    var mouse = new THREE.Vector2();
+    mouse.x = (mouseEvent.offsetX / (domElem.width || domElem.innerWidth)) * 2 - 1;
+    mouse.y = -(mouseEvent.offsetY / (domElem.height || domElem.innerHeight)) * 2 + 1;
 
-		raycaster.setFromCamera(mouse, camera);
+    raycaster.setFromCamera(mouse, camera);
 
-		var intersections = raycaster.intersectObjects(scene.children, true);
-		return intersections.length > 0 ? intersections[0] : null;
+    var intersections = raycaster.intersectObjects(scene.children, true);
 
-	}
+    // return the first object with an enabled collider
+    return intersections.find(function(e){
+      return !e.object.userData
+        || !e.object.userData.altspace
+        || !e.object.userData.altspace.collider
+        || e.object.userData.altspace.collider.enabled !== false;
+    }) || null;
+  }
 
-	return {
-		init: init,
-	};
+  return {
+    init: init,
+  };
 
 }());
-
 
 /**
  * The Altspace SDK adds event bubbling to Three.js' events system.
@@ -3817,74 +3841,74 @@ altspace.utilities.shims.cursor = (function () {
  */
 ( function() {
 
-	if (!THREE) return;
+  if (!THREE) return;
 
-	if (window.altspace && window.altspace.inAltspace) return;
+  if (window.altspace && window.altspace.inAltspace) return;
 
-	THREE.EventDispatcher.prototype.dispatchEvent = dispatchEvent;
-	THREE.Object3D.prototype.dispatchEvent = dispatchEvent;
+  THREE.EventDispatcher.prototype.dispatchEvent = dispatchEvent;
+  THREE.Object3D.prototype.dispatchEvent = dispatchEvent;
 
-	function dispatchEvent( event ) {
+  function dispatchEvent( event ) {
 
-		var shouldStopPropagation;
-		var shouldStopPropagationImmediately;
+    var shouldStopPropagation;
+    var shouldStopPropagationImmediately;
 
-		if ( event.bubbles ) {
+    if ( event.bubbles ) {
 
-			event.currentTarget = this;
+      event.currentTarget = this;
 
-			event.stopPropagation = function () {
+      event.stopPropagation = function () {
 
-				shouldStopPropagation = true;
+        shouldStopPropagation = true;
 
-			}
+      }
 
-			event.stopImmediatePropagation = function () {
+      event.stopImmediatePropagation = function () {
 
-				shouldStopPropagationImmediately = true;
+        shouldStopPropagationImmediately = true;
 
-			}
+      }
 
-		}
+    }
 
-		if ( this._listeners ) {
+    if ( this._listeners ) {
 
-			var listeners = this._listeners;
-			var listenerArray = listeners[ event.type ];
+      var listeners = this._listeners;
+      var listenerArray = listeners[ event.type ];
 
-			if ( listenerArray ) {
+      if ( listenerArray ) {
 
-				event.target = event.target || this;
+        event.target = event.target || this;
 
-				var array = [];
-				var length = listenerArray.length;
+        var array = [];
+        var length = listenerArray.length;
 
-				for ( var i = 0; i < length; i ++ ) {
+        for ( var i = 0; i < length; i ++ ) {
 
-					array[ i ] = listenerArray[ i ];
+          array[ i ] = listenerArray[ i ];
 
-				}
+        }
 
-				for ( var i = 0; i < length; i ++ ) {
+        for ( var i = 0; i < length; i ++ ) {
 
-					array[ i ].call( this, event );
+          array[ i ].call( this, event );
 
-					if ( shouldStopPropagationImmediately ) return;
+          if ( shouldStopPropagationImmediately ) return;
 
-				}
+        }
 
-			}
+      }
 
-		}
+    }
 
 
-		if ( event.bubbles && this.parent && this.parent.dispatchEvent && ! shouldStopPropagation ) {
+    if ( event.bubbles && this.parent && this.parent.dispatchEvent && ! shouldStopPropagation ) {
 
-			dispatchEvent.call( this.parent, event );
+      dispatchEvent.call( this.parent, event );
 
-		}
+    }
 
-	}
+  }
 
 }() );
 
@@ -3904,44 +3928,48 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  *  rotation.
  * @param {Boolean} [config.shouldMove=true] Whether the animation should
  *  include movement.
+ * @param {Number} [config.x=3] Amount of bob on the x axis.
+ * @param {Number} [config.y=5] Amount of bob on the y axis.
  * @memberof module:altspace/utilities/behaviors
  **/
 altspace.utilities.behaviors.Bob = function (config) {
-	var object3d;
+  var object3d;
 
-	config = config || {};
+  config = config || {};
+  config.x = config.x || 3;
+  config.y = config.y || 5;
 
-	if (config.shouldRotate === undefined) config.shouldRotate = true;
-	if (config.shouldMove === undefined) config.shouldMove = true;
+  if (config.shouldRotate === undefined) config.shouldRotate = true;
+  if (config.shouldMove === undefined) config.shouldMove = true;
 
-	var offsetPosition;
-	var lastBobPosition = new THREE.Vector3();
-	//TODO: Rotation
+  var offsetPosition;
+  var lastBobPosition = new THREE.Vector3();
+  //TODO: Rotation
 
-	var nowOffset = Math.random() * 10000;
+  var nowOffset = Math.random() * 10000;
 
-	function awake(o) {
-		object3d = o;
-		offsetPosition = object3d.position.clone();
-	}
+  function awake(o) {
+    object3d = o;
+    offsetPosition = object3d.position.clone();
+  }
 
-	function update(deltaTime) {
-		var nowInt = Math.floor(performance.now()) + nowOffset;
+  function update(deltaTime) {
+    var nowInt = Math.floor(performance.now()) + nowOffset;
 
-		if (config.shouldMove) {
-			if (!lastBobPosition.equals(object3d.position)) offsetPosition.copy(object3d.position);
+    if (config.shouldMove) {
+      if (!lastBobPosition.equals(object3d.position)) offsetPosition.copy(object3d.position);
 
-			object3d.position.y = offsetPosition.y + Math.sin(nowInt / 800) * 3;
-			object3d.position.x = offsetPosition.x + Math.sin(nowInt / 500) * 5;
-			lastBobPosition.copy(object3d.position);
-		}
+      object3d.position.y = offsetPosition.y + Math.sin(nowInt / 800) * config.x;
+      object3d.position.x = offsetPosition.x + Math.sin(nowInt / 500) * config.y;
+      lastBobPosition.copy(object3d.position);
+    }
 
-		if (config.shouldRotate) {
-			object3d.rotation.x = Math.sin(nowInt / 500) / 15;
-		}
-	}
+    if (config.shouldRotate) {
+      object3d.rotation.x = Math.sin(nowInt / 500) / 15;
+    }
+  }
 
-	return { awake: awake, update: update };
+  return { awake: awake, update: update, type: 'Bob' };
 };
 
 window.altspace = window.altspace || {};
@@ -3954,73 +3982,73 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  * @param {Object} [config] Optional parameters.
  * @param {THREE.Color} [config.originalColor] Base material color.
  * @param {Number} [config.overBrightness=1.5] Material brightness when cursor
- *	is over button.
+ *  is over button.
  * @param {Number} [config.downBrightness=0.5] Material brightness when cursor
- *	is clicked.
+ *  is clicked.
  * @memberof module:altspace/utilities/behaviors
  */
 altspace.utilities.behaviors.ButtonStateStyle = function (config) {
-	var object3d;
-	var scene;
-	var originalColor;
-	var modifiedColor = new THREE.Color();
+  var object3d;
+  var scene;
+  var originalColor;
+  var modifiedColor = new THREE.Color();
 
-	config = config || {};
-	var overBrightness = config.overBrightness || 1.5;
-	var downBrightness = config.downBrightness || 0.5;
+  config = config || {};
+  var overBrightness = config.overBrightness || 1.5;
+  var downBrightness = config.downBrightness || 0.5;
 
-	function changeBrightness(brightness) {
-		modifiedColor.set(originalColor);
-		modifiedColor.multiplyScalar(brightness);
-		modifiedColor.r = THREE.Math.clamp(modifiedColor.r, 0, 1);
-		modifiedColor.g = THREE.Math.clamp(modifiedColor.g, 0, 1);
-		modifiedColor.b = THREE.Math.clamp(modifiedColor.b, 0, 1);
-		object3d.material.color = modifiedColor;
-	}
+  function changeBrightness(brightness) {
+    modifiedColor.set(originalColor);
+    modifiedColor.multiplyScalar(brightness);
+    modifiedColor.r = THREE.Math.clamp(modifiedColor.r, 0, 1);
+    modifiedColor.g = THREE.Math.clamp(modifiedColor.g, 0, 1);
+    modifiedColor.b = THREE.Math.clamp(modifiedColor.b, 0, 1);
+    object3d.material.color = modifiedColor;
+  }
 
-	function cursorLeave() {
-		object3d.removeEventListener('cursorleave', cursorLeave);
-		changeBrightness(1.0);
-	}
+  function cursorLeave() {
+    object3d.removeEventListener('cursorleave', cursorLeave);
+    changeBrightness(1.0);
+  }
 
-	function cursorEnter() {
-		changeBrightness(overBrightness);
-		object3d.addEventListener('cursorleave', cursorLeave);
-	}
+  function cursorEnter() {
+    changeBrightness(overBrightness);
+    object3d.addEventListener('cursorleave', cursorLeave);
+  }
 
-	function cursorUp(event) {
-		scene.removeEventListener('cursorup', cursorUp);
-		object3d.addEventListener('cursorenter', cursorEnter);
-		if (event.target === object3d) {
-			changeBrightness(overBrightness);
-			object3d.addEventListener('cursorleave', cursorLeave);
-		} else {
-			changeBrightness(1.0);
-		}
-	}
-	function cursorDown() {
-		scene.addEventListener('cursorup', cursorUp);
-		object3d.removeEventListener('cursorleave', cursorLeave);
-		object3d.removeEventListener('cursorenter', cursorEnter);
-		changeBrightness(downBrightness);
-	}
+  function cursorUp(event) {
+    scene.removeEventListener('cursorup', cursorUp);
+    object3d.addEventListener('cursorenter', cursorEnter);
+    if (event.target === object3d) {
+      changeBrightness(overBrightness);
+      object3d.addEventListener('cursorleave', cursorLeave);
+    } else {
+      changeBrightness(1.0);
+    }
+  }
+  function cursorDown() {
+    scene.addEventListener('cursorup', cursorUp);
+    object3d.removeEventListener('cursorleave', cursorLeave);
+    object3d.removeEventListener('cursorenter', cursorEnter);
+    changeBrightness(downBrightness);
+  }
 
-	function awake(o, s) {
-		object3d = o;
-		scene = s;
-		originalColor = config.originalColor || object3d.material.color;
-		object3d.addEventListener('cursorenter', cursorEnter);
-		object3d.addEventListener('cursordown', cursorDown);
-	}
+  function awake(o, s) {
+    object3d = o;
+    scene = s;
+    originalColor = config.originalColor || object3d.material.color;
+    object3d.addEventListener('cursorenter', cursorEnter);
+    object3d.addEventListener('cursordown', cursorDown);
+  }
 
-	function dispose() {
-		object3d.removeEventListener('cursorenter', cursorEnter);
-		object3d.removeEventListener('cursorleave', cursorLeave);
-		object3d.removeEventListener('cursorup', cursorUp);
-		object3d.removeEventListener('cursordown', cursorDown);
-	}
+  function dispose() {
+    object3d.removeEventListener('cursorenter', cursorEnter);
+    object3d.removeEventListener('cursorleave', cursorLeave);
+    object3d.removeEventListener('cursorup', cursorUp);
+    object3d.removeEventListener('cursordown', cursorDown);
+  }
 
-	return { awake: awake, dispose: dispose, type: 'ButtonStateStyle' };
+  return { awake: awake, dispose: dispose, type: 'ButtonStateStyle' };
 };
 
 window.altspace = window.altspace || {};
@@ -4034,183 +4062,224 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
 /**
  * A behavior that makes an object draggable along a plane.
  * @class Drag
- * @param {Object} [config] Specify the axes along which the object can be 
+ * @param {Object} [config] Specify the axes along which the object can be
  *  dragged.
- *  E.g. To constraint th object to an XY plane: `{x: true, y: true}`  
+ *  E.g. To constrain the object to an XY plane: `{x: true, y: true}`
  *  Each axis can also be an object specifying the minimum and maximum limits
- *  of the constraint. E.g. `{x: {min: -10, max: 20}, y: true}`  
+ *  of the constraint. E.g. `{x: {min: -10, max: 20}, y: true}`
  *  **Note:** Currently you must specify exactly two axes.
  * @memberof module:altspace/utilities/behaviors
  */
 altspace.utilities.behaviors.Drag = function (config) {
-	//space: view, local, world, sphere
-	//gridSnap, cursorSnap
-	//config: x: true, y: true, z: false, defaultDistance: 1000
+  //space: view, local, world, sphere
+  //gridSnap, cursorSnap
+  //config: x: true, y: true, z: false, defaultDistance: 1000
 
-	config = config || {};
+  config = config || {};
 
-	if (config.space === undefined) config.space = 'world';//TODO others
-	if (config.x === undefined) config.x = false;
-	if (config.y === undefined) config.y = false;
-	if (config.z === undefined) config.z = false;
-	if (config.cursorSnap === undefined) config.cursorSnap = true;//TODO false
+  if (config.space === undefined) config.space = 'world';//TODO others
+  if (config.x === undefined) config.x = false;
+  if (config.y === undefined) config.y = false;
+  if (config.z === undefined) config.z = false;
+  if (config.cursorSnap === undefined) config.cursorSnap = true;//TODO false
 
-	var inX = !!config.x;
-	var inY = !!config.y;
-	var inZ = !!config.z;
-	var min = new THREE.Vector3(
-		config.x.min !== undefined ? config.x.min : Number.NEGATIVE_INFINITY,
-		config.y.min !== undefined ? config.y.min : Number.NEGATIVE_INFINITY,
-		config.z.min !== undefined ? config.z.min : Number.NEGATIVE_INFINITY
-	);
-	var max = new THREE.Vector3(
-		config.x.max !== undefined ? config.x.max : Number.POSITIVE_INFINITY,
-		config.y.max !== undefined ? config.y.max : Number.POSITIVE_INFINITY,
-		config.z.max !== undefined ? config.z.max : Number.POSITIVE_INFINITY
-	);
+  var inX = !!config.x;
+  var inY = !!config.y;
+  var inZ = !!config.z;
+  var min = new THREE.Vector3(
+    config.x.min !== undefined ? config.x.min : Number.NEGATIVE_INFINITY,
+    config.y.min !== undefined ? config.y.min : Number.NEGATIVE_INFINITY,
+    config.z.min !== undefined ? config.z.min : Number.NEGATIVE_INFINITY
+  );
+  var max = new THREE.Vector3(
+    config.x.max !== undefined ? config.x.max : Number.POSITIVE_INFINITY,
+    config.y.max !== undefined ? config.y.max : Number.POSITIVE_INFINITY,
+    config.z.max !== undefined ? config.z.max : Number.POSITIVE_INFINITY
+  );
 
-	var object3d;
-	var scene;
-	var sync;
-	var intersector;
-	var dragOffset = new THREE.Vector3();
-	var raycaster = new THREE.Raycaster();
-	raycaster.linePrecision = 3;
+  var object3d;
+  var scene;
+  var sync;
+  var intersector;
+  var dragOffset = new THREE.Vector3();
+  var raycaster = new THREE.Raycaster();
+  raycaster.linePrecision = 3;
 
-	//if (THREE.REVISION !== '72') throw new Error('Drag requires three.js revision 72'); //TODO: Do we need a revision check?
+  //if (THREE.REVISION !== '72') throw new Error('Drag requires three.js revision 72'); //TODO: Do we need a revision check?
 
-	function awake(o, s) {
-		object3d = o;
-		scene = s;
-		sync = object3d.getBehaviorByType('Object3DSync');
-		makeIntersector();
-		scene.add(intersector);//TODO: see if I can remove it from the scene. Might not req 72.
-	}
+  function awake(o, s) {
+    object3d = o;
+    scene = s;
+    sync = object3d.getBehaviorByType('Object3DSync');
+    makeIntersector();
+    scene.add(intersector);//TODO: see if I can remove it from the scene. Might not req 72.
+  }
 
-	function makeIntersector() {
-		var extent = 10000;
-		var plane = new THREE.PlaneGeometry(extent, extent);
+  function makeIntersector() {
+    var extent = 10000;
+    var plane = new THREE.PlaneGeometry(extent, extent);
 
-		function makeXY() {
-			plane.rotateY(Math.PI);
-		}
-		function makeXZ() {
-			plane.rotateX(Math.PI / 2);
-		}
-		function makeYZ() {
-			plane.rotateY(Math.PI / 2);
-		}
-		function makeViewAligned() {
-			throw new Error('Not implemented');
-		}
+    function makeXY() {
+      plane.rotateY(Math.PI);
+    }
+    function makeXZ() {
+      plane.rotateX(Math.PI / 2);
+    }
+    function makeYZ() {
+      plane.rotateY(Math.PI / 2);
+    }
+    function makeViewAligned() {
+      throw new Error('Not implemented');
+    }
 
-		var axisCount = inX + inY + inZ; // implicit cast to integers
+    var axisCount = inX + inY + inZ; // implicit cast to integers
 
-		if (axisCount === 3) {
+    if (axisCount === 3) {
 
-			throw new Error('Arbitrary dragging currently unsupported. Please lock at least one axis.');
+      throw new Error('Arbitrary dragging currently unsupported. Please lock at least one axis.');
 
-		} else if (axisCount === 2) {
+    } else if (axisCount === 2) {
 
-			if (inX && inY) {
-				makeXY();
-			} else if (inX && inZ) {
-				makeXZ();
-			} else if (inY && inZ) {
-				makeYZ();
-			}
+      if (inX && inY) {
+        makeXY();
+      } else if (inX && inZ) {
+        makeXZ();
+      } else if (inY && inZ) {
+        makeYZ();
+      }
 
-		} else if (axisCount === 1) {
+    } else if (axisCount === 1) {
 
-			throw new Error('Single axis dragging currently unsupported.');
-			//TODO: make possible, possibly via view-aligned plane 
+      throw new Error('Single axis dragging currently unsupported.');
+      //TODO: make possible, possibly via view-aligned plane
 
-		} else {
-			throw new Error('Invalid axis configuration');
-		}
-		var material = new THREE.MeshBasicMaterial({ color: 'purple' });
-		material.side = THREE.DoubleSide;
-		intersector = new THREE.Mesh(plane, material);
-		intersector.visible = false;// ensures other raycasters don't hit our intersector
-		intersector.material.visible = false;// ensures we never see flicker during temp visibility
-	}
+    } else {
+      throw new Error('Invalid axis configuration');
+    }
+    var material = new THREE.MeshBasicMaterial({ color: 'purple' });
+    material.side = THREE.DoubleSide;
+    intersector = new THREE.Mesh(plane, material);
+    intersector.visible = false;// ensures other raycasters don't hit our intersector
+    intersector.material.visible = false;// ensures we never see flicker during temp visibility
+  }
 
-	function getWorldPosition(obj) {
-		obj.updateMatrixWorld();
-		var vec = new THREE.Vector3();
-		vec.setFromMatrixPosition(obj.matrixWorld);
-		return vec;
-	}
+  function getWorldPosition(obj) {
+    obj.updateMatrixWorld();
+    var vec = new THREE.Vector3();
+    vec.setFromMatrixPosition(obj.matrixWorld);
+    return vec;
+  }
 
-	function vec2str(vec) {
-		function shortNum(num) {
-			return Math.floor(num * 100) / 100;
-		}
-		return 'x: ' + shortNum(vec.x) + ', y: ' + shortNum(vec.y) + ', z: ' + shortNum(vec.z);
-	}
+  function vec2str(vec) {
+    function shortNum(num) {
+      return Math.floor(num * 100) / 100;
+    }
+    return 'x: ' + shortNum(vec.x) + ', y: ' + shortNum(vec.y) + ', z: ' + shortNum(vec.z);
+  }
 
-	function startDrag(event) {
-		scene.addEventListener('cursorup', stopDrag);
-		scene.addEventListener('cursormove', moveDrag);
+  function startDrag(event) {
+    scene.addEventListener('cursorup', stopDrag);
+    scene.addEventListener('cursormove', moveDrag);
 
-		//Remember difference between center of object and drag point. 
-		//Otherwise, object appears to 'jump' when selected, moving so its
-		//center is directly until the cursor. We allow drag on edge of object.
-		raycaster.set(event.ray.origin, event.ray.direction);
-		var hit = raycaster.intersectObject(object3d, true)[0];
-		if (!hit) return;
-		var dragPoint = hit.point.clone();
-		var objectCenterPoint = getWorldPosition(object3d).clone();
-		dragOffset.copy(dragPoint).sub(objectCenterPoint);
+    //Remember difference between center of object and drag point.
+    //Otherwise, object appears to 'jump' when selected, moving so its
+    //center is directly until the cursor. We allow drag on edge of object.
+    raycaster.set(event.ray.origin, event.ray.direction);
+    var hit = raycaster.intersectObject(object3d, true)[0];
+    if (!hit) return;
+    var dragPoint = hit.point.clone();
+    var objectCenterPoint = getWorldPosition(object3d).clone();
+    dragOffset.copy(dragPoint).sub(objectCenterPoint);
 
-		//Move to drag point (not object center), where raycast hits the object.
-		intersector.position.copy(dragPoint);
-		intersector.updateMatrixWorld();// necessary for raycast, TODO: Make GH issue
-	}
+    //Move to drag point (not object center), where raycast hits the object.
+    intersector.position.copy(intersector.parent.worldToLocal(dragPoint));
+    intersector.quaternion.copy(object3d.parent.quaternion);
+    intersector.updateMatrixWorld();// necessary for raycast, TODO: Make GH issue
 
-	function moveDrag(event) {
+    /**
+    * Fired on an object when a drag interaction begins.
+    *
+    * @event dragstart
+    * @type module:altspace/utilities/behaviors.Drag~DragEvent
+    * @memberof module:altspace/utilities/behaviors.Drag
+    */
+    var dragEvent = createDragEvent('dragstart');
+    object3d.dispatchEvent(dragEvent);
+  }
 
-		if (sync && !sync.isMine) sync.takeOwnership();
+  function moveDrag(event) {
 
-		//find intersection
-		intersector.visible = true;// allow our intersector to be intersected
-		raycaster.set(event.ray.origin, event.ray.direction);
-		var intersection = raycaster.intersectObject(intersector, true)[0];
-		intersector.visible = false;// disallow our intersector to be intersected
+    if (sync && !sync.isMine) sync.takeOwnership();
 
-		if (!intersection) return;
+    //find intersection
+    intersector.visible = true;// allow our intersector to be intersected
+    raycaster.set(event.ray.origin, event.ray.direction);
+    var intersection = raycaster.intersectObject(intersector, true)[0];
+    intersector.visible = false;// disallow our intersector to be intersected
 
-		//New position is intersection point minus offset. Need offset since
-		//user probably won't click on exact center of object to drag it.
-		var targetWorldPosition = new THREE.Vector3();
-		targetWorldPosition.copy(intersection.point).sub(dragOffset);
-		//But maintain the original y position of the object.
-		targetWorldPosition.y = getWorldPosition(object3d).y;
+    if (!intersection) return;
 
-		//constrain target position
-		targetWorldPosition.clamp(min, max);
+    //New position is intersection point minus offset. Need offset since
+    //user probably won't click on exact center of object to drag it.
+    var targetWorldPosition = new THREE.Vector3();
+    targetWorldPosition.copy(intersection.point).sub(dragOffset);
+    //But maintain the original y position of the object.
+    targetWorldPosition.y = getWorldPosition(object3d).y;
 
-		//move object
-		object3d.parent.updateMatrixWorld();
-		var targetLocalPosition = object3d.parent.worldToLocal(targetWorldPosition);//TODO: Test with nested objects
-		object3d.position.set(
-			config.x ? targetLocalPosition.x : object3d.position.x,
-			config.y ? targetLocalPosition.y : object3d.position.y,
-			config.z ? targetLocalPosition.z : object3d.position.z
-		);
+    //constrain target position
+    targetWorldPosition.clamp(min, max);
 
-	}
+    //move object
+    object3d.parent.updateMatrixWorld();
+    var targetLocalPosition = object3d.parent.worldToLocal(targetWorldPosition);//TODO: Test with nested objects
+    object3d.position.set(
+      config.x ? targetLocalPosition.x : object3d.position.x,
+      config.y ? targetLocalPosition.y : object3d.position.y,
+      config.z ? targetLocalPosition.z : object3d.position.z
+    );
 
-	function stopDrag() {
-		scene.removeEventListener('cursorup', stopDrag);
-		scene.removeEventListener('cursormove', moveDrag);
-	}
+  }
 
-	function start() {
-		object3d.addEventListener('cursordown', startDrag);
-	}
+  function stopDrag() {
+    scene.removeEventListener('cursorup', stopDrag);
+    scene.removeEventListener('cursormove', moveDrag);
 
-	return { awake: awake, start: start };
+    /**
+    * Fired on an object when a drag interaction ends
+    *
+    * @event dragstop
+    * @type module:altspace/utilities/behaviors.Drag~DragEvent
+    * @memberof module:altspace/utilities/behaviors.Drag
+    */
+    var dragEvent = createDragEvent('dragstop');
+    object3d.dispatchEvent(dragEvent);
+  }
+
+  function start() {
+    object3d.addEventListener('cursordown', startDrag);
+  }
+
+  function dispose() {
+    object3d.removeEventListener('cursordown', startDrag);
+  }
+
+  /**
+  * Represents events emitted during drag interactions
+  *
+  * @typedef {Object} module:altspace/utilities/behaviors.Drag~DragEvent
+  * @property {THREE.Ray} ray - The raycaster ray at the time of the event.
+  * @property {THREE.Object3D} target - The object which was dragged.
+  */
+  function createDragEvent(type) {
+    return {
+      type: type,
+      bubbles: true,
+      target: object3d,
+      ray: raycaster.ray.clone()
+    }
+  }
+
+  return { awake: awake, start: start, dispose: dispose, type: 'Drag' };
 };
 
 /**
@@ -4226,7 +4295,7 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  * Clicking left stick enters left alt mode, where movement is in X-Z plane.
  * Clicking left stick again exits left alt mode.
  * Right stick left / right rotates object clockwise / counterclockwise (y axis).
- * Rifht stick up / down rotates object away forwards / backwards (x axis).
+ * Right stick up / down rotates object away forwards / backwards (x axis).
  * Clicking right stick enters right alt mode, where left / right tumbles object (z axis).
  * Clicking right stick again exits right alt mode.
  * D-pad up / down scales object.
@@ -4240,184 +4309,184 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  * @memberof module:altspace/utilities/behaviors
  **/
 altspace.utilities.behaviors.GamepadControls = function (config) {
-	var object3d;
-	var gamepad;
-	var scene;
-	var sync;
+  var object3d;
+  var gamepad;
+  var scene;
+  var sync;
 
-	var isAltModeR= false;
-	var isAltModeL= false;
-	var prevAltButtonR = false;
-	var prevAltButtonL = false;
-	var isInitialized = false;
+  var isAltModeR= false;
+  var isAltModeL= false;
+  var prevAltButtonR = false;
+  var prevAltButtonL = false;
+  var isInitialized = false;
 
-	var originalObj;//used to reset
-	var tolerance = 0.2;//ignore stick deadzone
+  var originalObj;//used to reset
+  var tolerance = 0.2;//ignore stick dead zone
 
-	config = config || {};
-	if (config.position === undefined) config.position = true;
-	if (config.rotation === undefined) config.rotation = true;
-	if (config.scale === undefined) config.scale = true;
+  config = config || {};
+  if (config.position === undefined) config.position = true;
+  if (config.rotation === undefined) config.rotation = true;
+  if (config.scale === undefined) config.scale = true;
 
-	function awake(o, s) {
+  function awake(o, s) {
 
-		object3d = o;
-		scene = s;
-		sync = object3d.getBehaviorByType('Object3DSync');
-		originalObj = object3d.clone();
-		gamepad = getGamepad();
-		if (gamepad) {
-			console.log('Gamepad detected: ' + gamepad.id);
-		} else {
-			var intervalID = setInterval(function() {
-				gamepad = getGamepad();
-				if (gamepad) {
-					console.log('Gamepad connected: ' + gamepad.id);
-					clearInterval(intervalID);
-				}
-			}, 500);
-		}
+    object3d = o;
+    scene = s;
+    sync = object3d.getBehaviorByType('Object3DSync');
+    originalObj = object3d.clone();
+    gamepad = getGamepad();
+    if (gamepad) {
+      console.log('Gamepad detected: ' + gamepad.id);
+    } else {
+      var intervalID = setInterval(function() {
+        gamepad = getGamepad();
+        if (gamepad) {
+          console.log('Gamepad connected: ' + gamepad.id);
+          clearInterval(intervalID);
+        }
+      }, 500);
+    }
 
-		scene.addEventListener('cursordown', function(e) {
-			//preventDefault only works when app has focus, so call after initial click
-			if (gamepad && !isInitialized) {
-				preventDefault(gamepad);
-				isInitialized = true;
-			}
-		});
+    scene.addEventListener('cursordown', function(e) {
+      //preventDefault only works when app has focus, so call after initial click
+      if (gamepad && !isInitialized) {
+        preventDefault(gamepad);
+        isInitialized = true;
+      }
+    });
 
-	}
+  }
 
-	function getGamepad() {
-		if (altspace && altspace.inClient) {
-			gamepads = altspace.getGamepads();
-		} else {
-			//Gamepad API works in Chrome and Firefox browsers only
-			//https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API
-			gamepads = navigator.getGamepads();
-		}
-		if (gamepads.length > 0) {
-			for (var i=0; i < gamepads.length; i++) {
-				var g = gamepads[i];
-				if (g && g.axes  && g.axes.length === 4 && g.buttons && g.buttons.length === 16) {
-					if (altspace && altspace.inClient) preventDefault(g);
-					return g;//return first valid gamepad
-				}
-			}
-		}
-		return undefined;
-	}
+  function getGamepad() {
+    if (altspace && altspace.inClient) {
+      gamepads = altspace.getGamepads();
+    } else {
+      //Gamepad API works in Chrome and Firefox browsers only
+      //https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API
+      gamepads = navigator.getGamepads();
+    }
+    if (gamepads.length > 0) {
+      for (var i=0; i < gamepads.length; i++) {
+        var g = gamepads[i];
+        if (g && g.axes  && g.axes.length === 4 && g.buttons && g.buttons.length === 16) {
+          if (altspace && altspace.inClient) preventDefault(g);
+          return g;//return first valid gamepad
+        }
+      }
+    }
+    return undefined;
+  }
 
-	function preventDefault(g) {
-		var axes = [];
-		var buttons = [];
-		for (var i=0; i > g.buttons; i++) buttons[i] = false;
-		for (var i=0; i > g.axes; i++) axes[i] = false;
-		if (config.position) {
-			axes[0] = true;
-			axes[1] = true;
-			buttons[10] = true;
-		}
-		if (config.rotation) {
-			axes[2] = true;
-			axes[3] = true;
-			buttons[11] = true;
-		}
-		if (config.scale) {
-			buttons[12] = true;
-			buttons[13] = true;
-		}
-		buttons[8] = true;
-		g.preventDefault(axes, buttons);
-	}
+  function preventDefault(g) {
+    var axes = [];
+    var buttons = [];
+    for (var i=0; i > g.buttons; i++) buttons[i] = false;
+    for (var i=0; i > g.axes; i++) axes[i] = false;
+    if (config.position) {
+      axes[0] = true;
+      axes[1] = true;
+      buttons[10] = true;
+    }
+    if (config.rotation) {
+      axes[2] = true;
+      axes[3] = true;
+      buttons[11] = true;
+    }
+    if (config.scale) {
+      buttons[12] = true;
+      buttons[13] = true;
+    }
+    buttons[8] = true;
+    g.preventDefault(axes, buttons);
+  }
 
-	function update(deltaTime) {
-		if ((!altspace || !altspace.inClient) && window.chrome && gamepad) {
-			gamepad = getGamepad();//On Chrome, need to poll for updates.
-		}
-		if (!gamepad) return;
+  function update(deltaTime) {
+    if ((!altspace || !altspace.inClient) && window.chrome && gamepad) {
+      gamepad = getGamepad();//On Chrome, need to poll for updates.
+    }
+    if (!gamepad) return;
 
-		//For axis and button numbers see: https://w3c.github.io/gamepad/  
-		var isResetButton = gamepad.buttons[8].pressed;//reset / back button
-		if (isResetButton) {
-			if (!sync.isMine) sync.takeOwnership();
-			object3d.position.copy(originalObj.position);
-			object3d.rotation.copy(originalObj.rotation);
-			object3d.scale.copy(originalObj.scale);
-			return;
-		}
+    //For axis and button numbers see: https://w3c.github.io/gamepad/
+    var isResetButton = gamepad.buttons[8].pressed;//reset / back button
+    if (isResetButton) {
+      if (!sync.isMine) sync.takeOwnership();
+      object3d.position.copy(originalObj.position);
+      object3d.rotation.copy(originalObj.rotation);
+      object3d.scale.copy(originalObj.scale);
+      return;
+    }
 
-		if (config.position) {
-			var isAltButtonL = gamepad.buttons[10].pressed;//left stick button
-			if (prevAltButtonL && !isAltButtonL) isAltModeL = !isAltModeL;//button released
-			prevAltButtonL = isAltButtonL;
+    if (config.position) {
+      var isAltButtonL = gamepad.buttons[10].pressed;//left stick button
+      if (prevAltButtonL && !isAltButtonL) isAltModeL = !isAltModeL;//button released
+      prevAltButtonL = isAltButtonL;
 
-			var leftStickX = gamepad.axes[0];//left / right
-			var leftStickY = gamepad.axes[1];//up / down
+      var leftStickX = gamepad.axes[0];//left / right
+      var leftStickY = gamepad.axes[1];//up / down
 
-			var isMove = Math.abs(leftStickX) > tolerance || Math.abs(leftStickY) > tolerance;
-			if (isMove && !sync.isMine) sync.takeOwnership();
+      var isMove = Math.abs(leftStickX) > tolerance || Math.abs(leftStickY) > tolerance;
+      if (isMove && !sync.isMine) sync.takeOwnership();
 
-			var moveDistance = 200 * (deltaTime/1000);// 200 units per second
-			if (!isAltModeL && Math.abs(leftStickX) > tolerance) {
-				object3d.position.x += moveDistance * leftStickX;
-			}
-			if (!isAltModeL && Math.abs(leftStickY) > tolerance) {
-				object3d.position.z += moveDistance * leftStickY;
-			}
-			if (isAltModeL && Math.abs(leftStickX) > tolerance) {
-				object3d.position.x += moveDistance * leftStickX;
-			}
-			if (isAltModeL && Math.abs(leftStickY) > tolerance) {
-				object3d.position.y += moveDistance * -leftStickY;
-			}
-		}
+      var moveDistance = 200 * (deltaTime/1000);// 200 units per second
+      if (!isAltModeL && Math.abs(leftStickX) > tolerance) {
+        object3d.position.x += moveDistance * leftStickX;
+      }
+      if (!isAltModeL && Math.abs(leftStickY) > tolerance) {
+        object3d.position.z += moveDistance * leftStickY;
+      }
+      if (isAltModeL && Math.abs(leftStickX) > tolerance) {
+        object3d.position.x += moveDistance * leftStickX;
+      }
+      if (isAltModeL && Math.abs(leftStickY) > tolerance) {
+        object3d.position.y += moveDistance * -leftStickY;
+      }
+    }
 
-		if (config.rotation) {
-			var isAltButtonR = gamepad.buttons[11].pressed;//right stick button
-			if (prevAltButtonR && !isAltButtonR) isAltModeR = !isAltModeR;//button released
-			prevAltButtonR = isAltButtonR;
+    if (config.rotation) {
+      var isAltButtonR = gamepad.buttons[11].pressed;//right stick button
+      if (prevAltButtonR && !isAltButtonR) isAltModeR = !isAltModeR;//button released
+      prevAltButtonR = isAltButtonR;
 
-			var rightStickX = gamepad.axes[2];//left / right
-			var rightStickY = gamepad.axes[3];//up / down
+      var rightStickX = gamepad.axes[2];//left / right
+      var rightStickY = gamepad.axes[3];//up / down
 
-			var isRotate = Math.abs(rightStickX) > tolerance || Math.abs(rightStickY) > tolerance;
-			if (isRotate && !sync.isMine) sync.takeOwnership();
+      var isRotate = Math.abs(rightStickX) > tolerance || Math.abs(rightStickY) > tolerance;
+      if (isRotate && !sync.isMine) sync.takeOwnership();
 
-			var rotateAngle = Math.PI * (deltaTime/1000);// 180 degrees per second
-			if (!isAltModeR && Math.abs(rightStickX) > tolerance) {
-				object3d.rotation.y += rotateAngle * rightStickX;
-			}
-			if (!isAltModeR && Math.abs(rightStickY) > tolerance) {
-				object3d.rotation.x += rotateAngle * rightStickY;
-			}
-			if (isAltModeR && Math.abs(rightStickX) > tolerance) {
-				object3d.rotation.z += rotateAngle * -rightStickX;
-			}
-		}
+      var rotateAngle = Math.PI * (deltaTime/1000);// 180 degrees per second
+      if (!isAltModeR && Math.abs(rightStickX) > tolerance) {
+        object3d.rotation.y += rotateAngle * rightStickX;
+      }
+      if (!isAltModeR && Math.abs(rightStickY) > tolerance) {
+        object3d.rotation.x += rotateAngle * rightStickY;
+      }
+      if (isAltModeR && Math.abs(rightStickX) > tolerance) {
+        object3d.rotation.z += rotateAngle * -rightStickX;
+      }
+    }
 
-		if (config.scale) {
-			var scaleChange = 10 * (deltaTime/1000);// 10 units per second
-			var dpadUp = gamepad.buttons[12].pressed;//d-pad up
-			var dpadDown = gamepad.buttons[13].pressed;//d-pad down
+    if (config.scale) {
+      var scaleChange = 10 * (deltaTime/1000);// 10 units per second
+      var dpadUp = gamepad.buttons[12].pressed;//d-pad up
+      var dpadDown = gamepad.buttons[13].pressed;//d-pad down
 
-			var isScale = gamepad.buttons[12].pressed || gamepad.buttons[13].pressed;
-			if (isScale && !sync.isMine) sync.takeOwnership();
+      var isScale = gamepad.buttons[12].pressed || gamepad.buttons[13].pressed;
+      if (isScale && !sync.isMine) sync.takeOwnership();
 
-			var prev = object3d.scale;
-			var v3 = new THREE.Vector3(1, 1, 1);
-			v3.multiplyScalar(scaleChange);
-			if (dpadUp) object3d.scale.add(v3);
-			if (dpadDown) {
-				if (prev.x > v3.x && prev.y > v3.y && prev.z > v3.z) {//Don't go negative.
-					object3d.scale.sub(v3);
-				}
-			}
-		}
+      var prev = object3d.scale;
+      var v3 = new THREE.Vector3(1, 1, 1);
+      v3.multiplyScalar(scaleChange);
+      if (dpadUp) object3d.scale.add(v3);
+      if (dpadDown) {
+        if (prev.x > v3.x && prev.y > v3.y && prev.z > v3.z) {//Don't go negative.
+          object3d.scale.sub(v3);
+        }
+      }
+    }
 
-	}
+  }
 
-	return { awake: awake, update: update };
+  return { awake: awake, update: update, type: 'GamepadControls' };
 };
 
 
@@ -4438,99 +4507,424 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  */
 altspace.utilities.behaviors.HoverColor = function(config){
 
-	config = config || {};
+  config = config || {};
 
-	//Default is to trigger color change on cursorenter/cursorleave events,
-	//also support triggering on cursordown/cursorup events.
-	if (config.event === undefined) config.event = 'cursorenter';
-	if (config.event !== 'cursorenter' && config.event !== 'cursordown') {
-		throw Error('Expected config.event "cursorenter" or "cursordown"');
-	}
-	if (config.color === undefined) config.color = new THREE.Color('yellow');
+  //Default is to trigger color change on cursorenter/cursorleave events,
+  //also support triggering on cursordown/cursorup events.
+  if (config.event === undefined) config.event = 'cursorenter';
+  if (config.event !== 'cursorenter' && config.event !== 'cursordown') {
+    throw Error('Expected config.event "cursorenter" or "cursordown"');
+  }
+  if (config.color === undefined) config.color = new THREE.Color('yellow');
 
-	var object3d;
-	var cursordownObject;
-	var cursorenterObject;
-	var scene;
+  var object3d;
+  var cursordownObject;
+  var cursorenterObject;
+  var scene;
 
 
-	function awake(o, s) {
-		object3d = o;
-		scene = s;
-		object3d.addEventListener('cursordown', cursordown);
-		scene.addEventListener('cursorup', cursorupScene);
-		if (config.event === 'cursorenter') {
-			object3d.addEventListener('cursorenter', cursorenter);
-			object3d.addEventListener('cursorleave', cursorleave);
-		}
-	}
+  function awake(o, s) {
+    object3d = o;
+    scene = s;
+    object3d.addEventListener('cursordown', cursordown);
+    scene.addEventListener('cursorup', cursorupScene);
+    if (config.event === 'cursorenter') {
+      object3d.addEventListener('cursorenter', cursorenter);
+      object3d.addEventListener('cursorleave', cursorleave);
+    }
+  }
 
-	function cursordown(event){
-		cursordownObject = object3d;
-		if (config.event === 'cursordown' ){
-			setColor(cursordownObject);
-		}
-	}
+  function cursordown(event){
+    cursordownObject = object3d;
+    if (config.event === 'cursordown' ){
+      setColor(cursordownObject);
+    }
+  }
 
-	function cursorenter(event){
-		//ignore hover events if a different object is selected,
-		//for example during a drag we don't want to change highlight
-		if (cursordownObject && cursordownObject !== object3d){
-			return;
-		} 
-		if (cursorenterObject){
-			unsetcolor(cursorenterObject);
-		}
-		cursorenterObject = object3d;
-		setColor(object3d);
-	}
+  function cursorenter(event){
+    //ignore hover events if a different object is selected,
+    //for example during a drag we don't want to change highlight
+    if (cursordownObject && cursordownObject !== object3d){
+      return;
+    }
+    if (cursorenterObject){
+      unsetcolor(cursorenterObject);
+    }
+    cursorenterObject = object3d;
+    setColor(object3d);
+  }
 
-	function cursorleave(event){
-		if (cursorenterObject === object3d){
-			cursorenterObject = null;
-			unsetColor(object3d);
-		}
-	}
+  function cursorleave(event){
+    if (cursorenterObject === object3d){
+      cursorenterObject = null;
+      unsetColor(object3d);
+    }
+  }
 
-	function cursorupScene(event){
-		if (config.event === 'cursordown' && cursordownObject ){
-			unsetColor(cursordownObject);
-		}
-		cursordownObject = null;
-	}
+  function cursorupScene(event){
+    if (config.event === 'cursordown' && cursordownObject ){
+      unsetColor(cursordownObject);
+    }
+    cursordownObject = null;
+  }
 
-	function setColor(o){
-		if (o.material && o.material.color){
-			o.userData.origColor = o.material.color;
-			o.material.color = config.color;  
-			//Not strictly needed but seems to make updating faster in Altspace.
-			if (o.material) o.material.needsUpdate = true;
-		} 
-		for (var i = 0; i < o.children.length; i++){
-			setColor(o.children[i], config.color);//recursively apply to children
-		}
-	}
+  function setColor(o){
+    if (o.material && o.material.color){
+      o.userData.origColor = o.material.color;
+      o.material.color = config.color;
+      //Not strictly needed but seems to make updating faster in Altspace.
+      if (o.material) o.material.needsUpdate = true;
+    }
+    for (var i = 0; i < o.children.length; i++){
+      setColor(o.children[i], config.color);//recursively apply to children
+    }
+  }
 
-	function unsetColor(o){
-		if (o.material && o.material.color){
-			if (!o.userData.origColor){
-				console.error('Cannot unsetColor, no userData.origColor for object', o);
-				return;
-			}
-			o.material.color = o.userData.origColor;
-			if (o.material) o.material.needsUpdate = true;
-		} 
-		for (var i = 0; i < o.children.length; i++){
-			unsetColor(o.children[i]);
-		}
-	}
+  function unsetColor(o){
+    if (o.material && o.material.color){
+      if (!o.userData.origColor){
+        console.error('Cannot unsetColor, no userData.origColor for object', o);
+        return;
+      }
+      o.material.color = o.userData.origColor;
+      if (o.material) o.material.needsUpdate = true;
+    }
+    for (var i = 0; i < o.children.length; i++){
+      unsetColor(o.children[i]);
+    }
+  }
 
-	return {
-		awake: awake,
-		//no update method, event-driven
-	};
+  function dispose() {
+    object3d.removeEventListener('cursordown', cursordown);
+    scene.removeEventListener('cursorup', cursorupScene);
+    object3d.removeEventListener('cursorenter', cursorenter);
+    object3d.removeEventListener('cursorleave', cursorleave);
+  }
+
+  return {
+    //no update method, event-driven
+    awake: awake,
+    dispose: dispose,
+    type: 'HoverColor'
+  };
 
 };
+
+//Change scale of an object when cursor hovers over it.
+window.altspace = window.altspace || {};
+window.altspace.utilities = window.altspace.utilities || {};
+window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
+
+/**
+ * Changes the scale of an object when the cursor hovers over it, and restores the original scale when the cursor is no longer hovering over the object.
+ * @class HoverScale
+ * @param {Object} [config] Optional parameters.
+ * @param {Number} [config.scale=1.15] A scaling factor that will be applied to the object's initial scale when the cursor hovers over it.
+ * @param {Number} [config.duration=75] Duration the scaling effect is intended to take to complete, in milliseconds.
+ * @param {Boolean} [config.revertOnDispose=true] Specifies whether the object's original scale should be restored when the behavior has been destroyed.
+ * @memberof module:altspace/utilities/behaviors
+ */
+altspace.utilities.behaviors.HoverScale = function(config) {
+  config = config || {};
+  var scale = config.scale || 1.15;
+  var duration = config.duration || 75; // Milliseconds
+  var revertOnDispose = ((config.revertOnDispose !== undefined) ? config.revertOnDispose : true);
+
+  var object3d;
+  var originalScale;
+  var elapsedTime;
+  var progress;
+  var srcScale;
+  var destScale;
+
+  function awake(o, s) {
+    object3d = o;
+    originalScale = object3d.scale.clone();
+
+    srcScale = object3d.scale.clone();
+    srcScale.multiplyScalar(scale);
+
+    destScale = new THREE.Vector3();
+    destScale.copy(originalScale);
+
+    progress = 1;
+    elapsedTime = duration;
+
+    object3d.addEventListener('cursorenter', onHoverStateChange);
+    object3d.addEventListener('cursorleave', onHoverStateChange);
+  }
+
+  function update(deltaTime) {
+    if(progress < 1) {
+      elapsedTime += deltaTime;
+      elapsedTime = THREE.Math.clamp(elapsedTime, 0, duration);
+
+      progress = THREE.Math.clamp(elapsedTime / duration, 0, 1);
+      object3d.scale.lerpVectors(srcScale, destScale, progress);
+    }
+  }
+
+  function dispose() {
+    object3d.removeEventListener('cursorenter', onHoverStateChange);
+    object3d.removeEventListener('cursorleave', onHoverStateChange);
+
+    // Restore Original Object Scale Before Behavior Was Applied
+    if(revertOnDispose) object3d.scale.copy(originalScale);
+
+    originalScale = null;
+    srcScale = null;
+    destScale = null;
+    object3d = null;
+  }
+
+  function onHoverStateChange() {
+    var temp = srcScale;
+    srcScale = destScale;
+    destScale = temp;
+
+    progress = 1 - progress;
+    elapsedTime = duration - elapsedTime;
+  }
+
+  return { awake: awake, update: update, dispose: dispose, type: 'HoverScale' };
+};
+
+/**
+ * @module altspace/utilities/behaviors
+ */
+window.altspace = window.altspace || {};
+window.altspace.utilities = window.altspace.utilities || {};
+window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
+
+/**
+ * An array in the form of `[bodyPart, side, subIndex]` identifying a joint in the tracking skeleton.
+ * E.g. `['Index', 'Left', 0]` identifies the first joint on the index finger of the left hand.
+ * See [TrackingSkeleton#getJoint]{@link module:altspace~TrackingSkeleton#getJoint} for available
+ * joint names.
+ * @typedef {Array.<String, String, Number>} module:altspace/utilities/behaviors.JointCollisionEvents~JointId
+ **/
+
+/**
+ * The JointCollisionEvents behavior dispatches collision events which have been triggered by
+ * [TrackingJoints]{@link module:altspace~TrackingJoint} intersecting with the object that has this behavior.
+ *
+ * @class JointCollisionEvents
+ * @param {Object} [config] Optional parameters.
+ * @param {Array.<JointId>} [config.joints] Array of
+ * [JointIds]{@link module:altspace/utilities/behaviors.JointCollisionEvents~JointId} to track.<br>
+ * Defaults to:
+ *
+ *     [
+ *         ['Hand', 'Left', 0],
+ *         ['Thumb', 'Left', 3],
+ *         ['Index', 'Left', 3],
+ *         ['Middle', 'Left', 3],
+ *         ['Ring', 'Left', 3],
+ *         ['Pinky', 'Left', 3],
+ *
+ *         ['Hand', 'Right', 0],
+ *         ['Thumb', 'Right', 3],
+ *         ['Index', 'Right', 3],
+ *         ['Middle', 'Right', 3],
+ *         ['Ring', 'Right', 3],
+ *         ['Pinky', 'Right', 3],
+ *     ]
+ * @param {Number} [config.jointCubeSize=15] Size of dummy cube used to track each joint.
+ * For optimal results, it is recommended that the value
+ * provided is scaled according to your enclosure scaling factor.
+ * @memberof module:altspace/utilities/behaviors
+ **/
+altspace.utilities.behaviors.JointCollisionEvents = function(_config) {
+  var object3d;
+  var config = _config || {};
+
+  config.jointCubeSize = config.jointCubeSize || 15;
+  config.joints = config.joints || altspace.utilities.behaviors.JointCollisionEvents.HAND_JOINTS;
+
+  var skeleton;
+  var jointCube;
+  var hasCollided = false;
+  var collidedJoints = [];
+  var jointIntersectUnion = null;
+
+  function initSkeleton(scene) {
+    return new Promise(function(resolve, reject) {
+      var skel = null;
+
+      // Attempt to use existing skeleton when available
+      scene.traverse(function(child) {
+        if(child.type === 'TrackingSkeleton') {
+          skel = child;
+          return;
+        }
+      });
+
+      if(skel) return resolve(skel);
+
+      // Skeleton has not been assigned to scene yet
+      altspace.getThreeJSTrackingSkeleton().then(function(trackingSkeleton) {
+        skel = trackingSkeleton;
+        scene.add(skel);
+        return resolve(skel);
+      });
+    });
+  }
+
+  function awake(o, s) {
+    object3d = o;
+
+    // Get the tracking skeleton
+    initSkeleton(s).then(function(_skeleton) {
+      // Attach skeleton
+      skeleton = _skeleton;
+
+      jointCube = new THREE.Vector3(
+        config.jointCubeSize,
+        config.jointCubeSize,
+        config.jointCubeSize
+      );
+    }).catch(function (err) {
+      console.log('Failed to get tracking skeleton', err);
+    });
+  }
+
+  function update(deltaTime) {
+    if(!skeleton) return;
+
+    // Collect joints based on joints config option
+    var joints = [];
+    for(var i = 0; i < config.joints.length; i++) {
+      joints[i] = skeleton.getJoint(
+        config.joints[i][0],
+        config.joints[i][1],
+        config.joints[i][2] ? config.joints[i][2] : 0
+      );
+    }
+
+    // Get bounding box of owner object
+    var objectBB = new THREE.Box3().setFromObject(object3d);
+
+    // Add up all colliding joint intersects
+    var prevJointIntersectUnion = jointIntersectUnion;
+    jointIntersectUnion = null;
+
+    var prevCollidedJoints = collidedJoints;
+    collidedJoints = [];
+
+    var hasPrevCollided = hasCollided;
+    hasCollided = false;
+
+    if(
+      object3d.visible &&
+      object3d.scale.x > Number.EPSILON &&
+      object3d.scale.y > Number.EPSILON &&
+      object3d.scale.z > Number.EPSILON
+    ) {
+      for(var i = 0; i < config.joints.length; i++) {
+        var joint = joints[i];
+        if(joint && joint.confidence !== 0) {
+          var jointBB = new THREE.Box3().setFromCenterAndSize(joint.position, jointCube);
+          var collision = objectBB.intersectsBox(jointBB);
+          if(collision) {
+            var intersectBB = objectBB.intersect(jointBB);
+            if(jointIntersectUnion) {
+              jointIntersectUnion.union(intersectBB);
+            } else {
+              jointIntersectUnion = intersectBB;
+            }
+
+            hasCollided = true;
+            collidedJoints.push(joint);
+          }
+        }
+      }
+    }
+
+    // Dispatch collision event
+    if(!hasPrevCollided && hasCollided) {
+      /**
+      * Fires a single event when any specified joints initially collide with the object.
+      *
+      * @event jointcollisionenter
+      * @property {Object} detail Event details
+      * @property {THREE.Box3} detail.intersect - A union of all joint bounding boxes which intersected with object.
+      * @property {module:altspace~TrackingJoint[]} detail.joints - An array of joints which which were involved in the intersection union.
+      * @property {THREE.Object3D} target - The object which was intersected.
+      * @memberof module:altspace/utilities/behaviors.JointCollisionEvents
+      */
+      object3d.dispatchEvent({
+        type: 'jointcollisionenter',
+        detail: {
+          intersect: jointIntersectUnion,
+          joints: collidedJoints
+        },
+        bubbles: true,
+        target: object3d
+      });
+    }
+    else if(hasPrevCollided && !hasCollided) {
+      /**
+      * Fires a single event when all joints are no longer colliding with the object.
+      *
+      * @event jointcollisionleave
+      * @property {Object} detail Event details
+      * @property {THREE.Box3} detail.intersect - A union of all joint bounding boxes which last intersected with the object.
+      * @property {module:altspace~TrackingJoint[]} detail.joints - An array of joints which which were involved in the intersection union.
+      * @property {THREE.Object3D} target - The object which was intersected.
+      * @memberof module:altspace/utilities/behaviors.JointCollisionEvents
+      */
+      object3d.dispatchEvent({
+        type: 'jointcollisionleave',
+        detail: {
+          intersect: prevJointIntersectUnion || new THREE.Box3(),
+          joints: prevCollidedJoints
+        },
+        bubbles: true,
+        target: object3d
+      });
+    }
+
+    // Dispatch collision event
+    if(hasCollided) {
+      /**
+      * Fires a continuous event while any joints are colliding with the object.
+      *
+      * @event jointcollision
+      * @property {Object} detail Event details
+      * @property {THREE.Box3} detail.intersect - A union of all joint bounding boxes which intersected with the object.
+      * @property {module:altspace~TrackingJoint[]} detail.joints - An array of joints which which were involved in the intersection union.
+      * @property {THREE.Object3D} target - The object which was intersected.
+      * @memberof module:altspace/utilities/behaviors.JointCollisionEvents
+      */
+      object3d.dispatchEvent({
+        type: 'jointcollision',
+        detail: {
+          intersect: jointIntersectUnion,
+          joints: collidedJoints
+        },
+        bubbles: true,
+        target: object3d
+      });
+    }
+  }
+
+  return { awake: awake, update: update, type: 'JointCollisionEvents' };
+};
+altspace.utilities.behaviors.JointCollisionEvents.HAND_JOINTS = [
+  ['Hand', 'Left', 0],
+  ['Thumb', 'Left', 3],
+  ['Index', 'Left', 3],
+  ['Middle', 'Left', 3],
+  ['Ring', 'Left', 3],
+  ['Pinky', 'Left', 3],
+
+  ['Hand', 'Right', 0],
+  ['Thumb', 'Right', 3],
+  ['Index', 'Right', 3],
+  ['Middle', 'Right', 3],
+  ['Ring', 'Right', 3],
+  ['Pinky', 'Right', 3],
+];
 
 window.altspace = window.altspace || {};
 window.altspace.utilities = window.altspace.utilities || {};
@@ -4557,241 +4951,241 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  * @memberof module:altspace/utilities/behaviors
  **/
 window.altspace.utilities.behaviors.SceneSync = function (instanceRef, config) {
-	var sceneRef = instanceRef.child('scene');
-	var clientsRef = instanceRef.child('clients');
+  var sceneRef = instanceRef.child('scene');
+  var clientsRef = instanceRef.child('clients');
 
-	config = config || {};
-	var instantiators = config.instantiators || {};
-	var destroyers = config.destroyers || {};
+  config = config || {};
+  var instantiators = config.instantiators || {};
+  var destroyers = config.destroyers || {};
 
-	var autoSendRateMS = 100;
+  var autoSendRateMS = 100;
 
-	var syncBehaviors = [];
-	var objectForKey = {};
-	var keyForUuid = {};
+  var syncBehaviors = [];
+  var objectForKey = {};
+  var keyForUuid = {};
 
-	var clientId;
-	// there should always be one master client in the room. For now it will be the longest person online.
-	var masterClientId;
+  var clientId;
+  // there should always be one master client in the room. For now it will be the longest person online.
+  var masterClientId;
 
-	function autoSendAll() {
-		for (var i = 0, max = syncBehaviors.length; i < max; i++) {
-			syncBehaviors[i].autoSend();
-		}
-	}
+  function autoSendAll() {
+    for (var i = 0, max = syncBehaviors.length; i < max; i++) {
+      syncBehaviors[i].autoSend();
+    }
+  }
 
-	function awake(o, s) {
-		setInterval(autoSendAll, autoSendRateMS);
+  function awake(o, s) {
+    setInterval(autoSendAll, autoSendRateMS);
 
-		var scene = s;
+    var scene = s;
 
-		// temporary way of having unique identifiers for each client
-		clientId = scene.uuid;
-		clientsRef.on("value", function (snapshot) {
-			var clientIds = snapshot.val();
+    // temporary way of having unique identifiers for each client
+    clientId = scene.uuid;
+    clientsRef.on("value", function (snapshot) {
+      var clientIds = snapshot.val();
 
-			if (!clientIds) return;
+      if (!clientIds) return;
 
-			masterClientKey = Object.keys(clientIds)[0];
-			masterClientId = clientIds[masterClientKey];
-		});
-		// add our client ID to the list of connected clients, 
-		// but have it be automatically removed by firebase if we disconnect for any reason
-		clientsRef.push(clientId).onDisconnect().remove();
+      masterClientKey = Object.keys(clientIds)[0];
+      masterClientId = clientIds[masterClientKey];
+    });
+    // add our client ID to the list of connected clients, 
+    // but have it be automatically removed by firebase if we disconnect for any reason
+    clientsRef.push(clientId).onDisconnect().remove();
 
-		instanceRef.child('initialized').once('value', function (snapshot) {
-			var shouldInitialize = !snapshot.val();
-			snapshot.ref().set(true);
-			if (config.ready) {
-				config.ready(shouldInitialize);
-			}
-		});
-		
+    instanceRef.child('initialized').once('value', function (snapshot) {
+      var shouldInitialize = !snapshot.val();
+      snapshot.ref().set(true);
+      if (config.ready) {
+        config.ready(shouldInitialize);
+      }
+    });
+    
 
-		sceneRef.on('child_added', onInstantiate.bind(this));
-		sceneRef.on('child_removed', onDestroy.bind(this));
-	}
+    sceneRef.on('child_added', onInstantiate.bind(this));
+    sceneRef.on('child_removed', onDestroy.bind(this));
+  }
 
-	/**
-	 * Instantiate an object by syncType.
-	 * @instance
-	 * @method instantiate
-	 * @param {String} syncType Type of object to instantiate.
-	 * @param {Object} initData An object containing initialization data, passed
-	 *  to the instantiator.
-	 * @param {Boolean} destroyOnDisconnect If the object should be destroyed
-	 *  across all synced instance when the instantiating instance disconnects.
-	 * @memberof module:altspace/utilities/behaviors.SceneSync
-	 */
-	function instantiate(syncType, initData, destroyOnDisconnect) {
-		initData = initData || {};
-		var objectRef = sceneRef.push({ syncType: syncType, initData: initData },
-			function (error) { if (error) throw Error('Failed to save to Firebase', error) }
-		);
-		if (destroyOnDisconnect) {
-			objectRef.onDisconnect().remove();//send remvoe_child to remote clients
-		}
-		//instantiation done, local child_added callback happens syncronously with push
-		var object = objectForKey[objectRef.key()];
-		object.getBehaviorByType('Object3DSync').takeOwnership();
-		return object;
-	}
+  /**
+   * Instantiate an object by syncType.
+   * @instance
+   * @method instantiate
+   * @param {String} syncType Type of object to instantiate.
+   * @param {Object} initData An object containing initialization data, passed
+   *  to the instantiator.
+   * @param {Boolean} destroyOnDisconnect If the object should be destroyed
+   *  across all synced instance when the instantiating instance disconnects.
+   * @memberof module:altspace/utilities/behaviors.SceneSync
+   */
+  function instantiate(syncType, initData, destroyOnDisconnect) {
+    initData = initData || {};
+    var objectRef = sceneRef.push({ syncType: syncType, initData: initData },
+      function (error) { if (error) throw Error('Failed to save to Firebase', error) }
+    );
+    if (destroyOnDisconnect) {
+      objectRef.onDisconnect().remove();//send remvoe_child to remote clients
+    }
+    //instantiation done, local child_added callback happens syncronously with push
+    var object = objectForKey[objectRef.key()];
+    object.getBehaviorByType('Object3DSync').takeOwnership();
+    return object;
+  }
 
-	function onInstantiate(snapshot) {
+  function onInstantiate(snapshot) {
 
-		var data = snapshot.val();
-		var key = snapshot.key();
+    var data = snapshot.val();
+    var key = snapshot.key();
 
-		var instantiator = instantiators[data.syncType];
+    var instantiator = instantiators[data.syncType];
 
-		if (!instantiator) {
-			console.warn('No instantiator found for syncType: ' + data.syncType);
-			return;
-		}
+    if (!instantiator) {
+      console.warn('No instantiator found for syncType: ' + data.syncType);
+      return;
+    }
 
-		var object3d = instantiator(data.initData, data.syncType);
-		if (!object3d) {
-			console.error(data.syncType + '.create must return an Object3D');
-			return;
-		}
-		objectForKey[key] = object3d;
-		keyForUuid[object3d.uuid] = key;
+    var object3d = instantiator(data.initData, data.syncType);
+    if (!object3d) {
+      console.error(data.syncType + '.create must return an Object3D');
+      return;
+    }
+    objectForKey[key] = object3d;
+    keyForUuid[object3d.uuid] = key;
 
-		var syncBehavior = object3d.getBehaviorByType('Object3DSync');
-		if (!syncBehavior) {
-			console.error(data.syncType + ' instantiator must return an Object3D with an Object3DSync behavior');
-			return;
-		}
+    var syncBehavior = object3d.getBehaviorByType('Object3DSync');
+    if (!syncBehavior) {
+      console.error(data.syncType + ' instantiator must return an Object3D with an Object3DSync behavior');
+      return;
+    }
 
-		syncBehaviors.push(syncBehavior);
-		syncBehavior.link(snapshot.ref(), this);
-	}
+    syncBehaviors.push(syncBehavior);
+    syncBehavior.link(snapshot.ref(), this);
+  }
 
-	/**
-	 * Destroy a synced object across instances.
-	 * @instance
-	 * @method destroy
-	 * @param {Object} object3d The object to destroy.
-	 * @memberof module:altspace/utilities/behaviors.SceneSync
-	 */
-	function destroy(object3d) {
-		var key = keyForUuid[object3d.uuid];
-		if (!key) {
-			console.warn('Failed to find key for object3d to be destroyed', object3d);
-			return;
-		}
-		sceneRef.child(key).remove(function (error) {
-			if (error) console.warn('Failed to remove from Firebase', error);
-		});
-		sceneRef.child(key).off();//detach all callbacks
-	}
+  /**
+   * Destroy a synced object across instances.
+   * @instance
+   * @method destroy
+   * @param {Object} object3d The object to destroy.
+   * @memberof module:altspace/utilities/behaviors.SceneSync
+   */
+  function destroy(object3d) {
+    var key = keyForUuid[object3d.uuid];
+    if (!key) {
+      console.warn('Failed to find key for object3d to be destroyed', object3d);
+      return;
+    }
+    sceneRef.child(key).remove(function (error) {
+      if (error) console.warn('Failed to remove from Firebase', error);
+    });
+    sceneRef.child(key).off();//detach all callbacks
+  }
 
-	function onDestroy(snapshot) {
-		var data = snapshot.val();
-		var key = snapshot.key();
-		var object3d = objectForKey[key];
-		if (!object3d) {
-			console.warn('Failed to find object matching deleted key', key);
-			return;
-		}
-		var syncType = data.syncType;
-		if (!syncType) {
-			console.warn('No syncType found for object being destroyed', object3d);
-			return;
-		}
+  function onDestroy(snapshot) {
+    var data = snapshot.val();
+    var key = snapshot.key();
+    var object3d = objectForKey[key];
+    if (!object3d) {
+      console.warn('Failed to find object matching deleted key', key);
+      return;
+    }
+    var syncType = data.syncType;
+    if (!syncType) {
+      console.warn('No syncType found for object being destroyed', object3d);
+      return;
+    }
 
-		function defaultDestroyer(object3d) {
+    function defaultDestroyer(object3d) {
 
-			// remove all behaviors including this one
-			object3d.removeAllBehaviors();
+      // remove all behaviors including this one
+      object3d.removeAllBehaviors();
 
-			// remove from scene or parent
-			if (object3d.parent) {
-				object3d.parent.remove(object3d);
-			}
+      // remove from scene or parent
+      if (object3d.parent) {
+        object3d.parent.remove(object3d);
+      }
 
-			if (object3d.geometry) {
-				object3d.geometry.dispose();
-			}
+      if (object3d.geometry) {
+        object3d.geometry.dispose();
+      }
 
-			if (object3d.material) {
-				if (object3d.material.map) {
-					object3d.material.map.dispose();
-				}
-				object3d.material.dispose();
-			}
-		}
+      if (object3d.material) {
+        if (object3d.material.map) {
+          object3d.material.map.dispose();
+        }
+        object3d.material.dispose();
+      }
+    }
 
-		var customDestroyer = destroyers[syncType]
-		var shouldDefaultDestroy = !customDestroyer;
+    var customDestroyer = destroyers[syncType]
+    var shouldDefaultDestroy = !customDestroyer;
 
-		if (customDestroyer) {
+    if (customDestroyer) {
 
-			// returning true from a destroyer will additionally invoke the default destroyer
-			shouldDefaultDestroy = customDestroyer(object3d);
-		}
+      // returning true from a destroyer will additionally invoke the default destroyer
+      shouldDefaultDestroy = customDestroyer(object3d);
+    }
 
-		if (shouldDefaultDestroy) defaultDestroyer(object3d);
+    if (shouldDefaultDestroy) defaultDestroyer(object3d);
 
-		//remove from our local bookkeeping
-		delete objectForKey[key];
-		delete keyForUuid[object3d.uuid];
-	}
+    //remove from our local bookkeeping
+    delete objectForKey[key];
+    delete keyForUuid[object3d.uuid];
+  }
 
-	var exports = {
-		awake: awake,
-		instantiate: instantiate,
-		destroy: destroy,
-		type: 'SceneSync'
-	};
+  var exports = {
+    awake: awake,
+    instantiate: instantiate,
+    destroy: destroy,
+    type: 'SceneSync'
+  };
 
-	/**
-	 * Interval at which an object's position/rotation/scale data is sent to Firebase,
-	 * in milliseconds.
-	 * @readonly
-	 * @instance
-	 * @member {number} autoSendRateMS
-	 * @memberof module:altspace/utilities/behaviors.SceneSync
-	 */
-	Object.defineProperty(exports, 'autoSendRateMS', {
-		get: function () { return autoSendRateMS; }
-	});
+  /**
+   * Interval at which an object's position/rotation/scale data is sent to Firebase,
+   * in milliseconds.
+   * @readonly
+   * @instance
+   * @member {number} autoSendRateMS
+   * @memberof module:altspace/utilities/behaviors.SceneSync
+   */
+  Object.defineProperty(exports, 'autoSendRateMS', {
+    get: function () { return autoSendRateMS; }
+  });
 
-	/**
-	 * True if this client is the master, false otherwise. Master is generally the client that 
-	 * has been in the room the longest.
-	 * @readonly
-	 * @instance
-	 * @member {boolean} isMasterClient
-	 * @memberof module:altspace/utilities/behaviors.SceneSync
-	 */
-	Object.defineProperty(exports, 'isMasterClient', {
-		get: function () { return masterClientId === clientId; }
-	});
+  /**
+   * True if this client is the master, false otherwise. Master is generally the client that 
+   * has been in the room the longest.
+   * @readonly
+   * @instance
+   * @member {boolean} isMasterClient
+   * @memberof module:altspace/utilities/behaviors.SceneSync
+   */
+  Object.defineProperty(exports, 'isMasterClient', {
+    get: function () { return masterClientId === clientId; }
+  });
 
-	/**
-	 * UUID of the current client. 
-	 * @readonly
-	 * @instance
-	 * @member {string} clientId
-	 * @memberof module:altspace/utilities/behaviors.SceneSync
-	 */
-	Object.defineProperty(exports, 'clientId', {
-		get: function () { return clientId; }
-	});
+  /**
+   * UUID of the current client. 
+   * @readonly
+   * @instance
+   * @member {string} clientId
+   * @memberof module:altspace/utilities/behaviors.SceneSync
+   */
+  Object.defineProperty(exports, 'clientId', {
+    get: function () { return clientId; }
+  });
 
-	/**
-	 * Firebase reference for the 'clients' child location. Can be used by app to listen
-	 * to clients entering and leaving the room (but generally should not be modified by apps).
-	 * @readonly
-	 * @instance
-	 * @member {Firebase} clientsRef
-	 * @memberof module:altspace/utilities/behaviors.SceneSync
-	 */
-	Object.defineProperty(exports, 'clientsRef', {
-		get: function () { return clientsRef; }
-	});
-	return exports;
+  /**
+   * Firebase reference for the 'clients' child location. Can be used by app to listen
+   * to clients entering and leaving the room (but generally should not be modified by apps).
+   * @readonly
+   * @instance
+   * @member {Firebase} clientsRef
+   * @memberof module:altspace/utilities/behaviors.SceneSync
+   */
+  Object.defineProperty(exports, 'clientsRef', {
+    get: function () { return clientsRef; }
+  });
+  return exports;
 };
 
 window.altspace = window.altspace || {};
@@ -4803,27 +5197,27 @@ window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
  *
  * @class Spin
  * @param {Object} [config]
- * @param {Number} [config.speed=0.0001] Rotation speed in radians per 
+ * @param {Number} [config.speed=0.0001] Rotation speed in radians per
  *  millisecond
  * @memberof module:altspace/utilities/behaviors
  **/
 altspace.utilities.behaviors.Spin = function (config) {
 
-	config = config || {};
+  config = config || {};
 
-	if (config.speed === undefined) config.speed = 0.0001;
+  if (config.speed === undefined) config.speed = 0.0001;
 
-	var object3d;
+  var object3d;
 
-	function awake(o) {
-		object3d = o;
-	}
+  function awake(o) {
+    object3d = o;
+  }
 
-	function update(deltaTime) {
-		object3d.rotation.y += config.speed * deltaTime;
-	}
+  function update(deltaTime) {
+    object3d.rotation.y += config.speed * deltaTime;
+  }
 
-	return { awake: awake, update: update };
+  return { awake: awake, update: update, type: 'Spin' };
 };
 
 window.altspace = window.altspace || {};
@@ -4831,57 +5225,57 @@ window.altspace.utilities = window.altspace.utilities || {};
 window.altspace.utilities.behaviors = window.altspace.utilities.behaviors || {};
 
 altspace.utilities.behaviors.TouchpadRotate = function (config) {
-	config = config || {};
+  config = config || {};
 
-	var object3d;
-	var scene;
+  var object3d;
+  var scene;
 
-	var startingRotation;
+  var startingRotation;
 
-	var activelyRotating = false;
+  var activelyRotating = false;
 
-	function awake(o, s) {
-		object3d = o;
-		scene = s;
+  function awake(o, s) {
+    object3d = o;
+    scene = s;
 
-		altspace.addEventListener('touchpadup', onTouchpadUp);
-		altspace.addEventListener('touchpaddown', onTouchpadDown);
-		altspace.addEventListener('touchpadmove', onTouchpadMove);
-	}
+    altspace.addEventListener('touchpadup', onTouchpadUp);
+    altspace.addEventListener('touchpaddown', onTouchpadDown);
+    altspace.addEventListener('touchpadmove', onTouchpadMove);
+  }
 
-	function onTouchpadUp(event) {
-		activelyRotating = false;
-	}
+  function onTouchpadUp(event) {
+    activelyRotating = false;
+  }
 
-	function onTouchpadDown(event) {
-		activelyRotating = true;
-		startingRotation = object3d.rotation.clone();
-	}
+  function onTouchpadDown(event) {
+    activelyRotating = true;
+    startingRotation = object3d.rotation.clone();
+  }
 
-	var lastDisplacementX = 0;
+  var lastDisplacementX = 0;
 
-	var runningCount = 5;
-	var runningAverageVelocityX = 0;
+  var runningCount = 5;
+  var runningAverageVelocityX = 0;
 
-	function onTouchpadMove(event) {
-		var deltaX = event.displacementX - lastDisplacementX;
-		object3d.rotation.set(startingRotation.x, startingRotation.y + event.displacementX / 300, startingRotation.z);
+  function onTouchpadMove(event) {
+    var deltaX = event.displacementX - lastDisplacementX;
+    object3d.rotation.set(startingRotation.x, startingRotation.y + event.displacementX / 300, startingRotation.z);
 
-		runningAverageVelocityX = ((runningAverageVelocityX * runningCount) + deltaX / 300) / (runningCount + 1);
-		lastDisplacementX = event.displacementX;
-	}
+    runningAverageVelocityX = ((runningAverageVelocityX * runningCount) + deltaX / 300) / (runningCount + 1);
+    lastDisplacementX = event.displacementX;
+  }
 
-	function update(deltaTime) {
-		if (!activelyRotating && Math.abs(runningAverageVelocityX) > 0.01) {
-			object3d.rotation.y += runningAverageVelocityX;
-			runningAverageVelocityX *= 0.97;
-		}
-	}
+  function update(deltaTime) {
+    if (!activelyRotating && Math.abs(runningAverageVelocityX) > 0.01) {
+      object3d.rotation.y += runningAverageVelocityX;
+      runningAverageVelocityX *= 0.97;
+    }
+  }
 
-	function start() {
-	}
+  function start() {
+  }
 
-	return { awake: awake, start: start, update: update };
+  return { awake: awake, start: start, update: update, type: 'TouchpadRotate' };
 };
 
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
@@ -9724,13 +10118,13 @@ var _Map = require('babel-runtime/core-js/map')['default'];
 var _Array$from = require('babel-runtime/core-js/array/from')['default'];
 
 if (!window.altspace) {
-	window.altspace = {};
+  window.altspace = {};
 }
 if (!window.altspace.utilities) {
-	window.altspace.utilities = {};
+  window.altspace.utilities = {};
 }
 if (!window.altspace.utilities.behaviors) {
-	window.altspace.utilities.behaviors = {};
+  window.altspace.utilities.behaviors = {};
 }
 
 require('babel/polyfill');
@@ -9745,169 +10139,168 @@ var containerMax = _Symbol('containerMax'),
     origParentBoundingBoxes = new _Map();
 
 /**
- * The Layout behavior allows you to position objects easily. You can 
- * position an object relative to its parent (either the Scene or a 
+ * The Layout behavior allows you to position objects easily. You can
+ * position an object relative to its parent (either the Scene or a
  * another object) by using a position specifier for each of the axes.
  * The position specifier can be one of 'min', 'center' or 'max'. The default
  * specifier is 'center'. You can also add a modifier to the position in pixels
- * ('min+5'), a percentage ('min+10%') or meters ('min+1m'). Finally, you can 
- * choose the location of the anchor on the object you are trying to position 
+ * ('min+5'), a percentage ('min+10%') or meters ('min+1m'). Finally, you can
+ * choose the location of the anchor on the object you are trying to position
  * by using the 'my' parameter.
  * You must specify at least one axis on the 'at' parameter.
  *
  * @example
  * // Position the top of the cube at 1.5 meters above the bottom of its parent.
  * cube.addBehavior(new altpsace.utilities.behaviors.Layout({
- *	   my: {y: 'max'}, 
- *	   at: {y: 'min+1.5m'}
+ *     my: {y: 'max'},
+ *     at: {y: 'min+1.5m'}
  * });
  *
  * @class Layout
  * @memberof module:altspace/utilities/behaviors
  * @param {Object} config
- * @param {Object} config.at An object containing the axes and position 
- *  specifiers. At least one axis must be specificed. E.g. `{x: 'min', y: 'max-5%'}`
+ * @param {Object} config.at An object containing the axes and position
+ *  specifiers. At least one axis must be specified. E.g. `{x: 'min', y: 'max-5%'}`
  * @param {Object} [config.my] An object containing the axes and position
  *  specifiers for the layout anchor.
  **/
 
 var Layout = (function () {
-	function Layout(_ref) {
-		var _ref$my = _ref.my;
-		var my = _ref$my === undefined ? {} : _ref$my;
-		var at = _ref.at;
+  function Layout(_ref) {
+    var _ref$my = _ref.my;
+    var my = _ref$my === undefined ? {} : _ref$my;
+    var at = _ref.at;
 
-		_classCallCheck(this, Layout);
+    _classCallCheck(this, Layout);
 
-		this.my = my;
-		this.at = at;
-	}
+    this.my = my;
+    this.at = at;
+    this.type = 'Layout';
+  }
 
-	// TODO-BP Ideally these would be private methods.
+  // TODO-BP Ideally these would be private methods.
 
-	_createClass(Layout, [{
-		key: 'getAxisSettings',
-		value: function getAxisSettings(axis, axisValue, min, max) {
-			axisValue = axisValue || 'center';
-			axisValue = /(\w+)([-+].+)?/.exec(axisValue);
-			var position = axisValue[1];
-			var offsetSetting = axisValue[2];
-			var offset = parseFloat(offsetSetting) || 0;
-			if (offsetSetting && offsetSetting.endsWith('%')) {
-				offset = offset / 100 * (max[axis] - min[axis]);
-			} else if (offsetSetting && offsetSetting.endsWith('m')) {
-				console.log(offset, this[enclosure]);
-				offset = offset * this[enclosure].pixelsPerMeter;
-				console.log(offset);
-			}
-			return {
-				position: position,
-				offset: offset
-			};
-		}
-	}, {
-		key: 'getAnchorOffset',
-		value: function getAnchorOffset(axis, axisValue) {
-			var max = this[boundingBox].max;
-			var min = this[boundingBox].min;
+  _createClass(Layout, [{
+    key: 'getAxisSettings',
+    value: function getAxisSettings(axis, axisValue, min, max) {
+      axisValue = axisValue || 'center';
+      axisValue = /(\w+)([-+].+)?/.exec(axisValue);
+      var position = axisValue[1];
+      var offsetSetting = axisValue[2];
+      var offset = parseFloat(offsetSetting) || 0;
+      if (offsetSetting && offsetSetting.endsWith('%')) {
+        offset = offset / 100 * (max[axis] - min[axis]);
+      } else if (offsetSetting && offsetSetting.endsWith('m')) {
+        offset = offset * this[enclosure].pixelsPerMeter;
+      }
+      return {
+        position: position,
+        offset: offset
+      };
+    }
+  }, {
+    key: 'getAnchorOffset',
+    value: function getAnchorOffset(axis, axisValue) {
+      var max = this[boundingBox].max;
+      var min = this[boundingBox].min;
 
-			var _getAxisSettings = this.getAxisSettings(axis, axisValue, min, max);
+      var _getAxisSettings = this.getAxisSettings(axis, axisValue, min, max);
 
-			var position = _getAxisSettings.position;
-			var offset = _getAxisSettings.offset;
+      var position = _getAxisSettings.position;
+      var offset = _getAxisSettings.offset;
 
-			if (position === 'max') {
-				return -max[axis] + offset;
-			} else if (position === 'min') {
-				return -min[axis] + offset;
-			} else if (position === 'center') {
-				return offset;
-			} else {
-				throw new Error(axisValue + ' is an invalid layout position for ' + axis);
-			}
-		}
-	}, {
-		key: 'doLayout',
-		value: function doLayout() {
-			var _this = this;
+      if (position === 'max') {
+        return -max[axis] + offset;
+      } else if (position === 'min') {
+        return -min[axis] + offset;
+      } else if (position === 'center') {
+        return offset;
+      } else {
+        throw new Error(axisValue + ' is an invalid layout position for ' + axis);
+      }
+    }
+  }, {
+    key: 'doLayout',
+    value: function doLayout() {
+      var _this = this;
 
-			_Array$from('xyz').forEach(function (axis) {
-				var _getAxisSettings2 = _this.getAxisSettings(axis, _this.at[axis], _this[containerMin], _this[containerMax]);
+      _Array$from('xyz').forEach(function (axis) {
+        var _getAxisSettings2 = _this.getAxisSettings(axis, _this.at[axis], _this[containerMin], _this[containerMax]);
 
-				var position = _getAxisSettings2.position;
-				var offset = _getAxisSettings2.offset;
+        var position = _getAxisSettings2.position;
+        var offset = _getAxisSettings2.offset;
 
-				var anchorOffset = _this.getAnchorOffset(axis, _this.my[axis]);
-				if (position === 'max') {
-					_this[object3D].position[axis] = _this[containerMax][axis] + offset + anchorOffset;
-				} else if (position === 'min') {
-					_this[object3D].position[axis] = _this[containerMin][axis] + offset + anchorOffset;
-				} else if (position === 'center') {
-					_this[object3D].position[axis] = offset + anchorOffset;
-				} else {
-					throw new Error(_this.at[axis] + ' is an invalid layout position for ' + axis);
-				}
-			});
+        var anchorOffset = _this.getAnchorOffset(axis, _this.my[axis]);
+        if (position === 'max') {
+          _this[object3D].position[axis] = _this[containerMax][axis] + offset + anchorOffset;
+        } else if (position === 'min') {
+          _this[object3D].position[axis] = _this[containerMin][axis] + offset + anchorOffset;
+        } else if (position === 'center') {
+          _this[object3D].position[axis] = offset + anchorOffset;
+        } else {
+          throw new Error(_this.at[axis] + ' is an invalid layout position for ' + axis);
+        }
+      });
 
-			if (this[parent]) {
-				// Restore the original parent transform
-				this[parent].matrix = this[origMatrix];
-				this[parent].updateMatrixWorld(true);
-				this[parent].matrixAutoUpdate = this[origMatrixAutoUpdate];
-			}
-		}
-	}, {
-		key: 'awake',
-		value: function awake(_object3D) {
-			var _this2 = this;
+      if (this[parent]) {
+        // Restore the original parent transform
+        this[parent].matrix = this[origMatrix];
+        this[parent].updateMatrixWorld(true);
+        this[parent].matrixAutoUpdate = this[origMatrixAutoUpdate];
+      }
+    }
+  }, {
+    key: 'awake',
+    value: function awake(_object3D) {
+      var _this2 = this;
 
-			this[object3D] = _object3D;
-			this[boundingBox] = new THREE.Box3().setFromObject(this[object3D]);
+      this[object3D] = _object3D;
+      this[boundingBox] = new THREE.Box3().setFromObject(this[object3D]);
 
-			// TODO Listen for resize events on the enclosure
-			altspace.getEnclosure().then(function (_enclosure) {
-				_this2[enclosure] = _enclosure;
-				if (_this2[object3D].parent instanceof THREE.Scene) {
-					var hw = _this2[enclosure].innerWidth / 2,
-					    hh = _this2[enclosure].innerHeight / 2,
-					    hd = _this2[enclosure].innerDepth / 2;
-					_this2[containerMax] = new THREE.Vector3(hw, hh, hd);
-					_this2[containerMin] = new THREE.Vector3(-hw, -hh, -hd);
-					_this2.doLayout();
-				} else {
-					var objWorldScale = _this2[object3D].getWorldScale();
-					_this2[boundingBox].min.divide(objWorldScale);
-					_this2[boundingBox].max.divide(objWorldScale);
+      // TODO Listen for resize events on the enclosure
+      altspace.getEnclosure().then(function (_enclosure) {
+        _this2[enclosure] = _enclosure;
+        if (_this2[object3D].parent instanceof THREE.Scene) {
+          var hw = _this2[enclosure].innerWidth / 2,
+              hh = _this2[enclosure].innerHeight / 2,
+              hd = _this2[enclosure].innerDepth / 2;
+          _this2[containerMax] = new THREE.Vector3(hw, hh, hd);
+          _this2[containerMin] = new THREE.Vector3(-hw, -hh, -hd);
+          _this2.doLayout();
+        } else {
+          var objWorldScale = _this2[object3D].getWorldScale();
+          _this2[boundingBox].min.divide(objWorldScale);
+          _this2[boundingBox].max.divide(objWorldScale);
 
-					_this2[parent] = _this2[object3D].parent;
+          _this2[parent] = _this2[object3D].parent;
 
-					_this2[origMatrix] = _this2[parent].matrix.clone();
-					_this2[origMatrixAutoUpdate] = _this2[parent].matrixAutoUpdate;
+          _this2[origMatrix] = _this2[parent].matrix.clone();
+          _this2[origMatrixAutoUpdate] = _this2[parent].matrixAutoUpdate;
 
-					// We want to use the un-transormed anchor of the parent.
-					// Reset the parent matrix so that we can get the original bounding box.
-					_this2[parent].matrixAutoUpdate = false;
-					_this2[parent].matrix.identity();
+          // We want to use the un-transormed anchor of the parent.
+          // Reset the parent matrix so that we can get the original bounding box.
+          _this2[parent].matrixAutoUpdate = false;
+          _this2[parent].matrix.identity();
 
-					var parentBoundingBox = undefined;
-					if (origParentBoundingBoxes.has(_this2[parent].uuid)) {
-						parentBoundingBox = origParentBoundingBoxes.get(_this2[parent].uuid);
-					} else {
-						_this2[parent].remove(_this2[object3D]);
-						parentBoundingBox = new THREE.Box3().setFromObject(_this2[parent]);
-						_this2[parent].add(_this2[object3D]);
-						origParentBoundingBoxes.set(_this2[parent].uuid, parentBoundingBox);
-					}
+          var parentBoundingBox = undefined;
+          if (origParentBoundingBoxes.has(_this2[parent].uuid)) {
+            parentBoundingBox = origParentBoundingBoxes.get(_this2[parent].uuid);
+          } else {
+            _this2[parent].remove(_this2[object3D]);
+            parentBoundingBox = new THREE.Box3().setFromObject(_this2[parent]);
+            _this2[parent].add(_this2[object3D]);
+            origParentBoundingBoxes.set(_this2[parent].uuid, parentBoundingBox);
+          }
 
-					_this2[containerMax] = parentBoundingBox.max;
-					_this2[containerMin] = parentBoundingBox.min;
-					_this2.doLayout();
-				}
-			});
-		}
-	}]);
+          _this2[containerMax] = parentBoundingBox.max;
+          _this2[containerMin] = parentBoundingBox.min;
+          _this2.doLayout();
+        }
+      });
+    }
+  }]);
 
-	return Layout;
+  return Layout;
 })();
 
 window.altspace.utilities.behaviors.Layout = Layout;
@@ -10967,21 +11360,21 @@ var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default
 
 var _Promise = require('babel-runtime/core-js/promise')['default'];
 
-function getController(hand) {
-	var findGamepad = function findGamepad(resolve, reject) {
-		var gamepad = altspace.getGamepads().find(function (g) {
-			return g.mapping === 'steamvr' && g.hand === hand;
-		});
-		if (gamepad) {
-			console.log("SteamVR input device found", gamepad);
-			resolve(gamepad);
-		} else {
-			console.log("SteamVR input device not found trying again in 500ms...");
-			setTimeout(findGamepad, 500, resolve, reject);
-		}
-	};
+function getController(hand, config) {
+  var findGamepad = function findGamepad(resolve, reject) {
+    var gamepad = altspace.getGamepads().find(function (g) {
+      return g.mapping === 'steamvr' && g.hand === hand;
+    });
+    if (gamepad) {
+      if (config.logging) console.log("SteamVR input device found", gamepad);
+      resolve(gamepad);
+    } else {
+      if (config.logging) console.log("SteamVR input device not found trying again in 500ms...");
+      setTimeout(findGamepad, 500, resolve, reject);
+    }
+  };
 
-	return new _Promise(findGamepad);
+  return new _Promise(findGamepad);
 }
 
 /**
@@ -10989,6 +11382,8 @@ function getController(hand) {
  * to the ThreeJS scene and is required to use [SteamVRTrackedObject]{@link module:altspace/utilities/behaviors.SteamVRTrackedObject}
  *
  * @class SteamVRInput
+ * @param {Object} [config]
+ * @param {Boolean} [config.logging=false] Display console log output during SteamVR input device detection
  * @memberof module:altspace/utilities/behaviors
  *
  * @prop {Gamepad} leftController the left SteamVR [Gamepad]{@link module:altspace~Gamepad} or undefined if one has not yet been found
@@ -11001,46 +11396,48 @@ function getController(hand) {
  */
 
 var SteamVRInputBehavior = (function () {
-	function SteamVRInputBehavior() {
-		_classCallCheck(this, SteamVRInputBehavior);
+  function SteamVRInputBehavior(config) {
+    _classCallCheck(this, SteamVRInputBehavior);
 
-		this.type = 'SteamVRInput';
-	}
+    this.type = 'SteamVRInput';
+    this.config = config || {};
+    this.config.logging = this.config.logging || false;
+  }
 
-	_createClass(SteamVRInputBehavior, [{
-		key: 'awake',
-		value: function awake() {
-			var _this = this;
+  _createClass(SteamVRInputBehavior, [{
+    key: 'awake',
+    value: function awake() {
+      var _this = this;
 
-			this.leftControllerPromise = getController(SteamVRInputBehavior.LEFT_CONTROLLER);
-			this.rightControllerPromise = getController(SteamVRInputBehavior.RIGHT_CONTROLLER);
-			this.firstControllerPromise = _Promise.race([this.leftControllerPromise, this.rightControllerPromise]);
+      this.leftControllerPromise = getController(SteamVRInputBehavior.LEFT_CONTROLLER, this.config);
+      this.rightControllerPromise = getController(SteamVRInputBehavior.RIGHT_CONTROLLER, this.config);
+      this.firstControllerPromise = _Promise.race([this.leftControllerPromise, this.rightControllerPromise]);
 
-			this.leftControllerPromise.then(function (controller) {
-				_this.leftController = controller;
-			});
-			this.rightControllerPromise.then(function (controller) {
-				_this.rightController = controller;
-			});
-			this.firstControllerPromise.then(function (controller) {
-				_this.firstController = controller;
+      this.leftControllerPromise.then(function (controller) {
+        _this.leftController = controller;
+      });
+      this.rightControllerPromise.then(function (controller) {
+        _this.rightController = controller;
+      });
+      this.firstControllerPromise.then(function (controller) {
+        _this.firstController = controller;
 
-				var blockedAxes = controller.axes.map(function () {
-					return false;
-				});
-				var blockedButtons = controller.buttons.map(function () {
-					return false;
-				});
+        var blockedAxes = controller.axes.map(function () {
+          return false;
+        });
+        var blockedButtons = controller.buttons.map(function () {
+          return false;
+        });
 
-				blockedButtons[SteamVRInputBehavior.BUTTON_TRIGGER] = true;
-				blockedButtons[SteamVRInputBehavior.BUTTON_TOUCHPAD] = true;
+        blockedButtons[SteamVRInputBehavior.BUTTON_TRIGGER] = true;
+        blockedButtons[SteamVRInputBehavior.BUTTON_TOUCHPAD] = true;
 
-				controller.preventDefault(blockedAxes, blockedButtons);
-			});
-		}
-	}]);
+        controller.preventDefault(blockedAxes, blockedButtons);
+      });
+    }
+  }]);
 
-	return SteamVRInputBehavior;
+  return SteamVRInputBehavior;
 })();
 
 SteamVRInputBehavior.BUTTON_TRIGGER = 0;
@@ -11139,49 +11536,50 @@ var _createClass = require('babel-runtime/helpers/create-class')['default'];
 var _classCallCheck = require('babel-runtime/helpers/class-call-check')['default'];
 
 var SteamVRTrackedObjectBehavior = (function () {
-	function SteamVRTrackedObjectBehavior(_ref) {
-		var _ref$hand = _ref.hand;
-		var hand = _ref$hand === undefined ? 'first' : _ref$hand;
+  function SteamVRTrackedObjectBehavior(_ref) {
+    var _ref$hand = _ref.hand;
+    var hand = _ref$hand === undefined ? 'first' : _ref$hand;
 
-		_classCallCheck(this, SteamVRTrackedObjectBehavior);
+    _classCallCheck(this, SteamVRTrackedObjectBehavior);
 
-		this._hand = hand;
-	}
+    this._hand = hand;
+    this.type = 'SteamVRTrackedObject';
+  }
 
-	_createClass(SteamVRTrackedObjectBehavior, [{
-		key: 'awake',
-		value: function awake(object3d, scene) {
-			this._object3d = object3d;
-			this._scene = scene;
+  _createClass(SteamVRTrackedObjectBehavior, [{
+    key: 'awake',
+    value: function awake(object3d, scene) {
+      this._object3d = object3d;
+      this._scene = scene;
 
-			this._steamVRInput = this._scene.getBehaviorByType('SteamVRInput');
-		}
-	}, {
-		key: 'update',
-		value: function update() {
-			var controller = this._steamVRInput[this._hand + "Controller"];
-			var object3d = this._object3d;
+      this._steamVRInput = this._scene.getBehaviorByType('SteamVRInput');
+    }
+  }, {
+    key: 'update',
+    value: function update() {
+      var controller = this._steamVRInput[this._hand + "Controller"];
+      var object3d = this._object3d;
 
-			if (controller) {
-				var _controller$position = controller.position;
-				var x = _controller$position.x;
-				var y = _controller$position.y;
-				var z = _controller$position.z;
+      if (controller) {
+        var _controller$position = controller.position;
+        var x = _controller$position.x;
+        var y = _controller$position.y;
+        var z = _controller$position.z;
 
-				object3d.position.set(x, y, z);
+        object3d.position.set(x, y, z);
 
-				var _controller$rotation = controller.rotation;
-				var x = _controller$rotation.x;
-				var y = _controller$rotation.y;
-				var z = _controller$rotation.z;
-				var w = _controller$rotation.w;
+        var _controller$rotation = controller.rotation;
+        var x = _controller$rotation.x;
+        var y = _controller$rotation.y;
+        var z = _controller$rotation.z;
+        var w = _controller$rotation.w;
 
-				object3d.quaternion.set(x, y, z, w);
-			}
-		}
-	}]);
+        object3d.quaternion.set(x, y, z, w);
+      }
+    }
+  }]);
 
-	return SteamVRTrackedObjectBehavior;
+  return SteamVRTrackedObjectBehavior;
 })();
 
 window.altspace.utilities.behaviors.SteamVRTrackedObject = SteamVRTrackedObjectBehavior;
@@ -11189,11 +11587,11 @@ window.altspace.utilities.behaviors.SteamVRTrackedObject = SteamVRTrackedObjectB
 
 (function () {
 
-	var version = '0.14.1';
+  var version = '0.28.1';
 
-	if (window.altspace && window.altspace.requestVersion) {
-		window.altspace.requestVersion(version);
-	}
+  if (window.altspace && window.altspace.requestVersion) {
+    window.altspace.requestVersion(version);
+  }
 
 }());
 

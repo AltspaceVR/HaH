@@ -37,7 +37,7 @@ app.use('/static', express.static( libpath.join(__dirname, '../client') ));
 app.use('/decks', express.static( libpath.join(__dirname, '../decks') ));
 
 // load the pages that AREN'T the game
-//app.get('/', require('./status.js'));
+app.get('/', require('./status.js'));
 app.post('/feedback', bodyParser.json(), feedback.feedbackRequest);
 
 // bootstrap the game page

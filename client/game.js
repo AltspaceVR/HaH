@@ -161,8 +161,19 @@ var lockIds = null;
 
 		// hook up click-to-join handler
 		gameObjects.box.removeEventListener('cursorup');
+		gameObjects.box.removeEventListener('jointcollisionenter');
 		if (allowedByLockId()) {
 			gameObjects.box.addEventListener('cursorup', emitPlayerJoinRequest);
+			gameObjects.box.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]
+                                                                    ]})
+        );
+        gameObjects.box.addEventListener('jointcollisionenter', emitPlayerJoinRequest);
 		}
 
 		gameState = newGameState;
@@ -230,13 +241,29 @@ var lockIds = null;
 
 			// reset any click handlers
 			gameObjects.box.removeEventListener('cursorup');
+			gameObjects.box.removeEventListener('jointcollisionenter');
 			gameObjects.box.addEventListener('cursorup', function(){
+				socket.emit('dealCards');
+			});
+			gameObjects.box.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        gameObjects.box.addEventListener('jointcollisionenter', function(){
 				socket.emit('dealCards');
 			});
 
 			for(var i=0; i<12; i++){
 				var card = seat.getObjectByName('card'+i);
 				card.removeEventListener('cursorup');
+				card.removeEventListener('jointcollisionenter');
+				if(card.children != undefined && card.children.length){
+					card.children[0].removeEventListener('jointcollisionenter');
+				}
 			}
 		}
 
@@ -384,11 +411,23 @@ var lockIds = null;
 		if(id === playerInfo.id)
 		{
 			gameObjects.box.removeEventListener('cursorup');
+			gameObjects.box.removeEventListener('jointcollisionenter');
 			if(gameState === 'roundFinished')
 			{
 				gameObjects.box.addEventListener('cursorup', function(){
 					socket.emit('dealCards');
 				});
+				gameObjects.box.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        gameObjects.box.addEventListener('jointcollisionenter', function(){
+			socket.emit('dealCards');
+		});
 			}
 			else
 			{
@@ -451,10 +490,20 @@ var lockIds = null;
 
 			gameObjects.box.removeEventListener('cursorup');
 			gameObjects.box.addEventListener('cursorup', emitPlayerJoinRequest);
-
+			gameObjects.box.removeEventListener('jointcollisionenter');
+			gameObjects.box.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        gameObjects.box.addEventListener('jointcollisionenter', emitPlayerJoinRequest);
 			root.traverse(function(model){
 				if(model.name === 'nameplate'){
 					model.removeEventListener('cursorup');
+					model.removeEventListener('jointcollisionenter');
 				}
 			});
 		}
@@ -504,6 +553,7 @@ var lockIds = null;
 		gameState = 'roundStarted';
 		if(getSeat()){
 			gameObjects.box.removeEventListener('cursorup');
+			gameObjects.box.removeEventListener('jointcollisionenter');
 		}
 
 		updateCenterPieceState();
@@ -613,6 +663,21 @@ var lockIds = null;
 				.repeat(5).yoyo(true).start(performance.now() + 500);
 			blackCard.addBehavior( new Behaviors.CursorFeedback() );
 			blackCard.addEventListener('cursorup', function(){
+				blackCardAnimation.stop();
+				blackCard.position.z = originalPosition;
+				blackCard.removeAllBehaviors();
+				blackCard.scale.set(2,2,2);
+				socket.emit('roundStart');
+			});
+			blackCard.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        blackCard.addEventListener('jointcollisionenter', function(){
 				blackCardAnimation.stop();
 				blackCard.position.z = originalPosition;
 				blackCard.removeAllBehaviors();
@@ -733,6 +798,17 @@ var lockIds = null;
 				card.addEventListener('cursorup', function(){
 					handleCardSelection(i);
 				});
+				card.children[0].addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        card.children[0].addEventListener('jointcollisionenter',function(){
+					handleCardSelection(i);
+				});
 			});
 
 		}
@@ -796,8 +872,49 @@ var lockIds = null;
 				socket.emit('cardSelection', selection);
 				seat.remove(yes, no);
 			});
+			yes.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        yes.addEventListener('jointcollisionenter', exports.confirmSelection = function(){
+				socket.emit('cardSelection', selection);
+				seat.remove(yes, no);
+			});
 
 			no.addEventListener('cursorup', function()
+			{
+				// put all the cards back
+				selection.forEach(function(handIndex, selectionIndex)
+				{
+					var card = seat.getObjectByName('selection'+selectionIndex);
+					var spot = seat.getObjectByName('card'+handIndex);
+					card.position.set(0,0,0);
+					card.rotation.set(0,0,0);
+					card.scale.set(2,2,2);
+					card.name = '';
+
+					spot.add(card);
+				});
+
+				// zero out selection
+				selection = [];
+
+				// kill boxes
+				seat.remove(yes, no);
+			});
+			no.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        no.addEventListener('jointcollisionenter', function()
 			{
 				// put all the cards back
 				selection.forEach(function(handIndex, selectionIndex)
@@ -836,6 +953,7 @@ var lockIds = null;
 			for(var i=0; i<12; i++){
 				var spot = seat.getObjectByName('card'+i);
 				spot.removeEventListener('cursorup');
+				spot.removeEventListener('jointcollisionenter');
 			}
 		}
 
@@ -938,6 +1056,20 @@ var lockIds = null;
 					submissionSpot.getBehaviorByType('CursorFeedback')._onCursorLeave();
 					handleCzarSelection(index);
 				});
+				submissionSpot.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        submissionSpot.addEventListener('jointcollisionenter', function()
+			{
+				console.log('Selecting submission at', index);
+				submissionSpot.getBehaviorByType('CursorFeedback')._onCursorLeave();
+				handleCzarSelection(index);
+			});
 			}
 		});
 
@@ -980,12 +1112,36 @@ var lockIds = null;
 			socket.emit('winnerSelection', submission.playerId);
 			seat.remove(yes, no);
 		});
+		yes.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        yes.addEventListener('jointcollisionenter', function(){
+				socket.emit('winnerSelection', submission.playerId);
+			seat.remove(yes, no);
+			});
 		seat.add(yes);
 
 		no.name = 'no';
 		no.addBehavior( new Behaviors.CursorFeedback() );
 		no.applyMatrix( Utils.sphericalToMatrix(-0.6, 0, 0.5, 'xyz') );
 		no.addEventListener('cursorup', function(){
+			socket.emit('presentSubmission', '');
+			seat.remove(yes, no);
+		});
+		no.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        no.addEventListener('jointcollisionenter', function(){
 			socket.emit('presentSubmission', '');
 			seat.remove(yes, no);
 		});
@@ -1064,6 +1220,17 @@ var lockIds = null;
 			gameObjects.box.addEventListener('cursorup', function(){
 				socket.emit('dealCards');
 			});
+			gameObjects.box.addBehaviors(
+        altspace.utilities.behaviors.JointCollisionEvents({joints: [['Hand', 'Right', 0],
+                                                                    ['Thumb', 'Right', 3],
+                                                                    ['Index', 'Right', 3],
+                                                                    ['Middle', 'Right', 3],
+                                                                    ['Ring', 'Right', 3],
+                                                                    ['Pinky', 'Right', 3]]})
+        );
+        gameObjects.box.addEventListener('jointcollisionenter', function(){
+			socket.emit('dealCards');
+		});
 		}
 
 		// congratulate winner
@@ -1100,6 +1267,7 @@ var lockIds = null;
 			for(var i=0; i<12; i++){
 				var spot = seat.getObjectByName('card'+i);
 				spot.removeEventListener('cursorup');
+				spot.removeEventListener('jointcollisionenter');
 			}
 
 			// remove any yes/no boxes

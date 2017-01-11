@@ -441,16 +441,16 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 			g.fillText("HAH", x+1.5*edgeLength, y);
 		}
 		else {
-			makeSafeFont(g, ['Holograms Against Humanity'], .6525*cardWidth*fontScale);
-			g.fillText("Holograms Against Humanity", x+1.5*edgeLength, y);
+			makeSafeFont(g, ['HaH: Unholy Edition'], .6525*cardWidth*fontScale);
+			g.fillText("HaH: Unholy Edition", x+1.5*edgeLength, y);
 		}
 
 		// draw card back
 		g.font = 'bold '+(0.15*cardWidth*fontScale)+'px '+fontStack;
-		makeSafeFont(g, ['Holograms','Against','Humanity'], 0.8*cardWidth);
-		g.fillText('Holograms', 1.1*cardWidth, 0.22*cardWidth);
-		g.fillText('Against', 1.1*cardWidth, 0.37*cardWidth);
-		g.fillText('Humanity', 1.1*cardWidth, 0.52*cardWidth);
+		makeSafeFont(g, ['HaH:','Unholy','Edition'], 0.8*cardWidth);
+		g.fillText('HaH:', 1.1*cardWidth, 0.22*cardWidth);
+		g.fillText('Unholy', 1.1*cardWidth, 0.37*cardWidth);
+		g.fillText('Edition', 1.1*cardWidth, 0.52*cardWidth);
 
 		// assign texture
 		model.material = new THREE.MeshBasicMaterial({
@@ -478,24 +478,24 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 
 		// draw card
 		g.font = 'bold '+(0.15*cardWidth*fontScale)+'px '+fontStack;
-		makeSafeFont(g, ['Holograms','Against','Humanity'], 0.8*cardWidth);
+		makeSafeFont(g, ['HaH:','Unholy Edition','Humanity'], 0.8*cardWidth);
 		g.fillStyle = 'white';
 
-		g.fillText('Holograms', 0.1*cardWidth, 0.22*cardWidth);
-		g.fillText('Against', 0.1*cardWidth, 0.37*cardWidth);
-		g.fillText('Humanity', 0.1*cardWidth, 0.52*cardWidth);
+		g.fillText('HaH:', 0.1*cardWidth, 0.22*cardWidth);
+		g.fillText('Unholy', 0.1*cardWidth, 0.37*cardWidth);
+		g.fillText('Edition', 0.1*cardWidth, 0.52*cardWidth);
 
-		g.fillText('Holograms', 1.1*cardWidth, 0.22*cardWidth);
-		g.fillText('Against', 1.1*cardWidth, 0.37*cardWidth);
-		g.fillText('Humanity', 1.1*cardWidth, 0.52*cardWidth);
+		g.fillText('HaH:', 1.1*cardWidth, 0.22*cardWidth);
+		g.fillText('Unholy', 1.1*cardWidth, 0.37*cardWidth);
+		g.fillText('Edition', 1.1*cardWidth, 0.52*cardWidth);
 
 		g.font = 'bold '+(0.05*cardWidth*fontScale)+'px '+fontStack;
 		var legal = [
 			'© Cards Against Humanity LLC',
 			'Licensed under CC BY-NC-SA',
 			'cardsagainsthumanity.com',
-			'Adapted for AltspaceVR by:',
-			'Derogatory, falkrons, schmidtec'];
+			'Adapted by: Derogatory, falkrons, schmidtec',
+			'Made terrible by: Jacob, Richie, John & others'];
 		makeSafeFont(g, legal, 0.86*cardWidth);
 		for(var i=0; i<legal.length; i++){
 			g.fillText(legal[i], 0.07*cardWidth, (1.06 + 0.07*i)*cardWidth);
@@ -773,8 +773,8 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 					})(nameplate, newTurnOrder[i]);
 				}
 
-				var cardRadius = 0.5, row1Angle = Math.PI/5, row2Angle = Math.PI/3,
-					row1Sep = Math.PI/10, row2Sep = 1.5*Math.PI/10;
+				var cardRadius = 0.7, row1Angle = Math.PI/5, row2Angle = Math.PI/3,
+					row1Sep = Math.PI/10 * 1.3, row2Sep = 1.8*Math.PI/10;
 
 				// set card positions
 				for(var j=0; j<12; j++)
@@ -800,6 +800,7 @@ window.AudioContext = window.AudioContext || window.webkitAudioContext;
 					var card = new THREE.Object3D();
 					card.name = 'card'+j;
 					card.applyMatrix( Utils.sphericalToMatrix(theta, phi, cardRadius, 'zyx') );
+					card.position.z = card.position.z + 0.15;
 					seat.add(card);
 
 					// add hover feedback to your own cards

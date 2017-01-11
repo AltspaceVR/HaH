@@ -85,11 +85,9 @@ if( altspace.inClient )
 		}
 	});
 
-	if( ! /[&?]noPopup/.test(window.location.search) ){
-		altspace.open(
-			'https://docs.google.com/forms/d/1UHU5_WUsz9hoDdkiyiouvl5u49NgNUSA_ZS6qyXOtJk/viewform',
-			'_experience', {icon: window.location.origin+'/static/icon.png', hidden: true});
-	}
+	/*altspace.open(
+		'https://docs.google.com/forms/d/1UHU5_WUsz9hoDdkiyiouvl5u49NgNUSA_ZS6qyXOtJk/viewform',
+		'_experience', {icon: window.location.origin+'/static/icon.png', hidden: true});*/
 }
 else
 {
