@@ -872,6 +872,7 @@ var lockIds = null;
 	function cardSelectionComplete(selections)
 	{
 		gameState = 'czarSelectionPending';
+		joinBlocked = True;
 
 		// put responses in some random order
 		var displayList = [];
@@ -1053,6 +1054,7 @@ var lockIds = null;
 	function winnerSelection(playerId)
 	{
 		gameState = 'roundFinished';
+		joinBlocked = False;
 
 		// track winner event
 		if(czarId === playerInfo.id && submissionMap[playerId].length > 0)
